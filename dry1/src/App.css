@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+body {
+  background-color: white;
+  width: 100%;
+}
+
+#root {
+  width: 100%;
+}
+
+/* Scrolling animation for offer bar */
+@keyframes scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-scroll {
+  animation: scroll 10s linear infinite;
+}
+
+/* Ensure all images scale properly with zoom */
+img {
+  max-width: 100%;
+  height: auto;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Make all containers and content scale with viewport */
+* {
+  box-sizing: border-box;
+}
+
+/* Viewport-based scaling for text and images */
+.scale-with-zoom {
+  transform: scale(var(--zoom-scale, 1));
+  transform-origin: center;
+}
+
+/* Make containers scale with viewport */
+.container {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Responsive spacing that scales with viewport */
+.responsive-padding {
+  padding: clamp(1rem, 4vw, 3rem);
+}
+
+.responsive-margin {
+  margin: clamp(0.5rem, 2vw, 2rem);
+}
