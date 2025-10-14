@@ -119,6 +119,11 @@ const productSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  status: {
+    type: String,
+    enum: ['Active', 'Inactive', 'Out of Stock'],
+    default: 'Active'
+  },
   sortOrder: {
     type: Number,
     default: 0
@@ -157,7 +162,53 @@ const productSchema = new mongoose.Schema({
   },
   tags: [String],
   metaTitle: String,
-  metaDescription: String
+  metaDescription: String,
+  // Admin-added reviews (for display purposes)
+  reviews: [{
+    id: String,
+    customerName: String,
+    customerEmail: String,
+    rating: {
+      type: Number,
+      min: 1,
+      max: 5
+    },
+    title: String,
+    comment: String,
+    date: String,
+    verified: {
+      type: Boolean,
+      default: false
+    },
+    helpful: {
+      type: Number,
+      default: 0
+    }
+  }],
+  // Product popularity and urgency settings
+  popularitySettings: {
+    orderCount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    offerCountdown: {
+      enabled: {
+        type: Boolean,
+        default: true
+      },
+      duration: {
+        type: Number,
+        default: 15, // minutes
+        min: 1,
+        max: 60
+      },
+      startTime: {
+        type: Date,
+        default: Date.now
+      }
+    },
+  }
 }, {
   timestamps: true
 });
@@ -167,6 +218,7 @@ productSchema.index({ slug: 1 });
 productSchema.index({ category: 1 });
 productSchema.index({ categorySlug: 1 });
 productSchema.index({ isActive: 1 });
+productSchema.index({ status: 1 });
 productSchema.index({ isBestSeller: 1 });
 productSchema.index({ isFeatured: 1 });
 productSchema.index({ 'rating.average': -1 });

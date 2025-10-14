@@ -28,7 +28,7 @@ router.get('/config', (req, res) => {
       API_URL: process.env.API_URL || `http://${baseHost}:${backendPort}/api`,
       
       // File Upload Configuration
-      MAX_FILE_SIZE: parseInt(process.env.MAX_FILE_SIZE) || 5000000, // 5MB
+      MAX_FILE_SIZE: parseInt(process.env.MAX_FILE_SIZE) || 10485760, // 10MB (increased from 5MB)
       UPLOAD_PATH: process.env.UPLOAD_PATH || 'uploads',
       
       // Cache Configuration

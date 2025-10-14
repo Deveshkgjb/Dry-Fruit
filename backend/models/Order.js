@@ -92,6 +92,7 @@ const orderSchema = new mongoose.Schema({
       default: 'pending'
     },
     transactionId: String,
+    utrNumber: String, // UTR/Reference number from UPI transaction
     paidAt: Date,
     refundedAt: Date,
     refundAmount: Number

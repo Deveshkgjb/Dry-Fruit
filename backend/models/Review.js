@@ -9,7 +9,19 @@ const reviewSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: false // Made optional for public reviews
+  },
+  customerName: {
+    type: String,
+    trim: true,
+    required: function() {
+      return !this.user; // Required only if no user (public review)
+    }
+  },
+  customerEmail: {
+    type: String,
+    trim: true,
+    required: false
   },
   order: {
     type: mongoose.Schema.Types.ObjectId,
@@ -60,8 +72,8 @@ const reviewSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Compound index to prevent duplicate reviews per user per product
-reviewSchema.index({ product: 1, user: 1 }, { unique: true });
+// Note: Removed unique index to allow multiple public reviews per product
+// Application logic will handle duplicate prevention if needed
 
 // Index for efficient queries
 reviewSchema.index({ product: 1, status: 1 });

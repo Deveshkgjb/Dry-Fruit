@@ -3,6 +3,24 @@ import config from '../config/environment.js';
 
 const API_BASE_URL = config.API_BASE_URL;
 
+// Helper function to make API requests
+const apiRequest = async (url, options = {}) => {
+  const response = await fetch(`${API_BASE_URL}${url}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    },
+    ...options
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Network error' }));
+    throw new Error(error.message || `HTTP ${response.status}`);
+  }
+
+  return response.json();
+};
+
 // Mock data for development
 const mockPageContent = {
   homepage: {
@@ -14,7 +32,7 @@ const mockPageContent = {
       ctaLink: "/shop"
     },
     offerBar: {
-      text: "Free shipping on orders above ₹499",
+      text: "Find the amazing deal with us",
       backgroundColor: "#10B981",
       textColor: "#FFFFFF"
     },
@@ -83,51 +101,22 @@ const mockPageContent = {
         placeholder: "Enter your email"
       },
       socialMedia: {
-        facebook: "https://facebook.com/happilo",
-        instagram: "https://instagram.com/happilo",
-        twitter: "https://twitter.com/happilo",
-        youtube: "https://youtube.com/happilo"
+        facebook: "https://facebook.com/mufindryfruit",
+        instagram: "https://instagram.com/mufindryfruit",
+        twitter: "https://twitter.com/mufindryfruit",
+        youtube: "https://youtube.com/mufindryfruit"
       },
       paymentMethods: ["Visa", "Mastercard", "PayPal", "UPI", "Net Banking"],
-      copyright: "© 2024 Happilo. All rights reserved."
+      copyright: "© 2024 Mufindryfruit. All rights reserved."
     }
   },
   navbar: {
     logo: {
       image: "/logo.avif",
-      alt: "Happilo Logo"
+      alt: "Mufindryfruit Logo"
     },
     searchPlaceholder: "Search For Hazelnut",
-    categories: {
-      nuts: {
-        title: "🥜 Nuts",
-        items: ["Almonds", "Cashews", "Pistachios", "Walnuts", "Brazil Nuts", "Peanuts"]
-      },
-      driedFruits: {
-        title: "🍇 Dried Fruits",
-        items: ["Raisins", "Anjeer (Figs)", "Apricots", "Prunes", "Kiwi", "Mango"]
-      },
-      berries: {
-        title: "🍓 Berries",
-        items: ["Blueberries", "Cranberries", "Strawberries"]
-      },
-      dates: {
-        title: "🌴 Dates",
-        items: ["Omani", "Queen Kalmi", "Arabian", "Ajwa"]
-      },
-      seeds: {
-        title: "🌱 Seeds",
-        items: ["Chia Seeds", "Flax Seeds", "Pumpkin Seeds", "Sunflower Seeds"]
-      },
-      mixes: {
-        title: "🥗 Mixes",
-        items: ["Fitness Mix", "Roasted Party Mix", "Nuts & Berries Mix", "Berries Mix", "Champion Mix", "Nutty Trail Mix", "Seeds Mix"]
-      },
-      newLaunches: {
-        title: "🆕 New Launches",
-        items: ["Peanut Butter", "Party Snacks", "GameFul Corn Nuts"]
-      }
-    },
+    categories: {},
     navigation: ["New Launches", "Combos", "Gifts"]
   },
   cart: {
@@ -196,13 +185,37 @@ export const pageAPI = {
   // Get all page content
   getAllPages: async () => {
     try {
-      if (config.IS_DEVELOPMENT) {
-        // Return mock data for development
-        return mockPageContent;
+      // Always fetch from database first
+      console.log('📄 getAllPages - Fetching from database...');
+      const response = await apiRequest('/page-content');
+      console.log('📄 getAllPages - Database response:', response);
+      
+      if (response.success && response.data) {
+        console.log('📄 getAllPages - Using database content:', response.data);
+        return response.data;
       }
-      return await makeRequest('/pages');
+      
+      // Fallback to localStorage in development
+      if (config.IS_DEVELOPMENT) {
+        console.log('📄 getAllPages - Falling back to localStorage...');
+        const storedPageContent = JSON.parse(localStorage.getItem('pageContent') || '{}');
+        
+        // Merge stored content with mock data
+        const mergedContent = {
+          ...mockPageContent,
+          ...storedPageContent
+        };
+        
+        console.log('📄 getAllPages - Using merged content:', mergedContent);
+        return mergedContent;
+      }
+      
+      // Final fallback to mock data
+      console.log('📄 getAllPages - Using mock data as final fallback');
+      return mockPageContent;
     } catch (error) {
-      console.error('Error fetching page content:', error);
+      console.error('❌ getAllPages - Error fetching page content:', error);
+      console.log('📄 getAllPages - Falling back to mock data');
       return mockPageContent;
     }
   },
@@ -210,12 +223,33 @@ export const pageAPI = {
   // Get specific page content
   getPageContent: async (pageId) => {
     try {
-      if (config.IS_DEVELOPMENT) {
-        return mockPageContent[pageId] || {};
+      console.log('📄 Fetching page content from database for:', pageId);
+      
+      // Try to fetch from database first
+      const response = await apiRequest(`/page-content/${pageId}`);
+      
+      if (response && response.content) {
+        console.log('✅ Page content fetched from database:', response.content);
+        return response.content;
       }
-      return await makeRequest(`/pages/${pageId}`);
+      
+      // Fallback to mock data if database doesn't have content
+      console.log('📄 Using mock page content as fallback:', mockPageContent[pageId]);
+      return mockPageContent[pageId] || {};
     } catch (error) {
-      console.error('Error fetching page content:', error);
+      console.error('Error fetching page content from database:', error);
+      
+      // Fallback to localStorage in development
+      if (config.IS_DEVELOPMENT) {
+        const storedPageContent = JSON.parse(localStorage.getItem('pageContent') || '{}');
+        if (storedPageContent[pageId]) {
+          console.log('📄 Using localStorage fallback:', storedPageContent[pageId]);
+          return storedPageContent[pageId];
+        }
+      }
+      
+      // Final fallback to mock data
+      console.log('📄 Using mock page content as final fallback:', mockPageContent[pageId]);
       return mockPageContent[pageId] || {};
     }
   },
@@ -223,18 +257,60 @@ export const pageAPI = {
   // Update page content
   updatePageContent: async (pageId, sectionId, content) => {
     try {
-      if (config.IS_DEVELOPMENT) {
-        // Simulate API call
-        console.log('Updating page content:', { pageId, sectionId, content });
-        return { success: true, message: 'Content updated successfully' };
+      console.log('💾 Updating page content in database:', { pageId, sectionId, content });
+      
+      // First, get the current page content from database
+      let currentContent = {};
+      try {
+        const response = await apiRequest(`/page-content/${pageId}`);
+        currentContent = response.content || {};
+      } catch (error) {
+        console.log('📄 No existing content found, creating new:', pageId);
       }
       
-      return await makeRequest(`/pages/${pageId}/${sectionId}`, {
+      // Update the specific section
+      currentContent[sectionId] = content;
+      
+      // Save the updated content to database
+      const updateResponse = await apiRequest(`/page-content/${pageId}`, {
         method: 'PUT',
-        body: JSON.stringify(content),
+        body: JSON.stringify({ content: currentContent })
       });
+      
+      console.log('✅ Page content updated in database:', updateResponse);
+      
+      // Also store in localStorage for immediate frontend updates
+      if (config.IS_DEVELOPMENT) {
+        const storedPageContent = JSON.parse(localStorage.getItem('pageContent') || '{}');
+        if (!storedPageContent[pageId]) {
+          storedPageContent[pageId] = {};
+        }
+        storedPageContent[pageId][sectionId] = content;
+        localStorage.setItem('pageContent', JSON.stringify(storedPageContent));
+        console.log('💾 Also updated localStorage for immediate updates');
+      }
+      
+      return { success: true, message: 'Content updated successfully in database' };
     } catch (error) {
-      console.error('Error updating page content:', error);
+      console.error('Error updating page content in database:', error);
+      
+      // Fallback to localStorage in development
+      if (config.IS_DEVELOPMENT) {
+        console.log('🔄 Falling back to localStorage update');
+        const storedPageContent = JSON.parse(localStorage.getItem('pageContent') || '{}');
+        
+        if (!storedPageContent[pageId]) {
+          storedPageContent[pageId] = {};
+        }
+        
+        storedPageContent[pageId][sectionId] = content;
+        localStorage.setItem('pageContent', JSON.stringify(storedPageContent));
+        
+        console.log('💾 Updated page content in localStorage as fallback:', { pageId, sectionId, content });
+        
+        return { success: true, message: 'Content updated in localStorage (database unavailable)' };
+      }
+      
       throw error;
     }
   },

@@ -52,15 +52,44 @@ const ProductManagement = () => {
       date: new Date().toISOString().split('T')[0],
       verified: true,
       helpful: 0
-    }]
+    }],
+    // Quick rating settings
+    quickRating: 0,
+    quickReviewCount: '',
+    // Popularity and urgency settings
+    popularitySettings: {
+      orderCount: '',
+      offerCountdown: {
+        enabled: true,
+        duration: 15,
+        startTime: new Date()
+      },
+    }
   });
 
   const [uploadingMultiple, setUploadingMultiple] = useState(false);
+  const [statusUpdating, setStatusUpdating] = useState({});
+  const [notification, setNotification] = useState(null);
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
 
   useEffect(() => {
     fetchProducts();
     fetchCategories();
+    checkAdminLogin();
   }, []);
+
+  // Check if admin is logged in
+  const checkAdminLogin = () => {
+    const adminToken = localStorage.getItem('adminToken') || localStorage.getItem('token');
+    setIsAdminLoggedIn(!!adminToken);
+    
+    if (!adminToken) {
+      setNotification({
+        type: 'error',
+        message: '⚠️ Please login as admin to manage product status'
+      });
+    }
+  };
 
   const fetchProducts = async () => {
     try {
@@ -122,7 +151,29 @@ const ProductManagement = () => {
         date: new Date().toISOString().split('T')[0],
         verified: true,
         helpful: 0
-      }]
+      }, {
+        id: '',
+        customerName: '',
+        customerEmail: '',
+        rating: 5,
+        title: '',
+        comment: '',
+        date: new Date().toISOString().split('T')[0],
+        verified: true,
+        helpful: 0
+      }],
+      // Quick rating settings
+      quickRating: 0,
+      quickReviewCount: '',
+      // Popularity and urgency settings
+      popularitySettings: {
+        orderCount: '',
+        offerCountdown: {
+          enabled: true,
+          duration: 15,
+          startTime: new Date()
+        },
+      }
     });
   };
 
@@ -163,7 +214,19 @@ const ProductManagement = () => {
         date: new Date().toISOString().split('T')[0],
         verified: true,
         helpful: 0
-      }]
+      }],
+      // Quick rating settings
+      quickRating: product.rating?.average || 0,
+      quickReviewCount: product.rating?.count || 0,
+      // Popularity and urgency settings
+      popularitySettings: product.popularitySettings || {
+        orderCount: '',
+        offerCountdown: {
+          enabled: true,
+          duration: 15,
+          startTime: new Date()
+        },
+      }
     });
   };
 
@@ -185,8 +248,25 @@ const ProductManagement = () => {
           feature && typeof feature === 'string' && feature.trim() !== ''
         ),
         badges: formData.badges.filter(badge => badge && badge.text && typeof badge.text === 'string' && badge.text.trim() !== ''),
-        tags: formData.tags.filter(tag => tag && typeof tag === 'string' && tag.trim() !== '')
+        tags: formData.tags.filter(tag => tag && typeof tag === 'string' && tag.trim() !== ''),
+        // Include reviews and quick rating settings
+        reviews: formData.reviews.filter(review => 
+          review && review.customerName && review.customerName.trim() !== '' && 
+          review.comment && review.comment.trim() !== '' && 
+          review.rating && review.rating > 0
+        ),
+        quickRating: formData.quickRating,
+        quickReviewCount: formData.quickReviewCount
       };
+
+      // Debug: Log what's being sent to backend
+      console.log('🚀 Sending product data to backend:', {
+        name: productData.name,
+        reviewsCount: productData.reviews ? productData.reviews.length : 0,
+        quickRating: productData.quickRating,
+        quickReviewCount: productData.quickReviewCount,
+        reviews: productData.reviews
+      });
 
       if (editingProduct) {
         // Update existing product
@@ -195,12 +275,15 @@ const ProductManagement = () => {
       } else {
         // Add new product
         await productsAPI.create(productData);
-        showSuccess('Product created successfully!');
+        showSuccess('Product created successfully! All display sections will be updated automatically.');
         
         // Dispatch event to refresh category pages
         window.dispatchEvent(new CustomEvent('productCreated', {
           detail: { category: productData.category, categorySlug: productData.categorySlug }
         }));
+        
+        // Dispatch event to refresh home page sections
+        window.dispatchEvent(new CustomEvent('refreshHomeSections'));
       }
       
       // Refresh products list
@@ -350,25 +433,62 @@ const ProductManagement = () => {
         return;
       }
 
-      try {
-        // Create FormData for file upload
-        const formData = new FormData();
-        formData.append('image', file);
-
-        // Upload to backend using API service
-        const result = await uploadAPI.uploadImage(formData);
-
-        if (result.success) {
-          // Update the image URL with the uploaded file path
-          handleInputChange('images', { url: result.imageUrl }, imageIndex);
-          showSuccess('Image uploaded successfully!');
-        } else {
-          showError(result.message || 'Failed to upload image');
+      // Check image dimensions for mobile optimization
+      const img = new Image();
+      img.onload = async () => {
+        const { width, height } = img;
+        
+        // Check if image is too small
+        if (width < 400 || height < 400) {
+          showError(`Image too small: ${width}x${height}px. Minimum recommended: 400x400px`);
+          return;
         }
-      } catch (error) {
-        console.error('Upload error:', error);
-        showError('Failed to upload image. Please try again.');
+        
+        // Check if image is too large
+        if (width > 1200 || height > 1200) {
+          showError(`Image too large: ${width}x${height}px. Maximum recommended: 1200x1200px`);
+          return;
+        }
+        
+        // Check aspect ratio (warn if not square)
+        const aspectRatio = width / height;
+        if (aspectRatio < 0.8 || aspectRatio > 1.2) {
+          showError(`Image aspect ratio ${aspectRatio.toFixed(2)}:1 may cause mobile display issues. Recommended: 1:1 (square)`);
+          return;
+        }
+        
+        // Continue with upload if validation passes
+        await proceedWithUpload(file, imageIndex);
+      };
+      
+      img.onerror = () => {
+        showError('Invalid image file. Please select a valid image.');
+        return;
+      };
+      
+      img.src = URL.createObjectURL(file);
+    }
+  };
+
+  const proceedWithUpload = async (file, imageIndex) => {
+    try {
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('image', file);
+
+      // Upload to backend using API service
+      const result = await uploadAPI.uploadImage(formData);
+
+      if (result.success) {
+        // Update the image URL with the uploaded file path
+        handleInputChange('images', { url: result.imageUrl }, imageIndex);
+        showSuccess('Image uploaded successfully! ✅ Mobile-optimized');
+      } else {
+        showError(result.message || 'Failed to upload image');
       }
+    } catch (error) {
+      console.error('Upload error:', error);
+      showError('Failed to upload image. Please try again.');
     }
   };
 
@@ -432,6 +552,74 @@ const ProductManagement = () => {
       case 'Inactive': return 'bg-gray-100 text-gray-800';
       case 'Out of Stock': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Handle status toggle (Active/Inactive)
+  const handleStatusToggle = async (productId, newStatus) => {
+    try {
+      // Show loading state
+      setStatusUpdating(prev => ({ ...prev, [productId]: true }));
+      
+      console.log(`🔄 Toggling product ${productId} status to ${newStatus}`);
+      
+      // Get the admin token
+      const adminToken = localStorage.getItem('adminToken') || localStorage.getItem('token');
+      
+      if (!adminToken) {
+        throw new Error('Please login as admin to change product status');
+      }
+      
+      console.log('🔑 Using token:', adminToken.substring(0, 20) + '...');
+      
+      const response = await fetch(`${config.API_BASE_URL}/products/${productId}/toggle-status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response ok:', response.ok);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ API Error:', errorData);
+        throw new Error(errorData.message || 'Failed to update product status');
+      }
+
+      const result = await response.json();
+      console.log('✅ Status updated:', result);
+
+      // Update the product in the local state
+      setProducts(products.map(product => 
+        product._id === productId 
+          ? { ...product, status: newStatus }
+          : product
+      ));
+
+      // Refresh the products list to ensure all sections are updated
+      setTimeout(() => {
+        fetchProducts();
+      }, 1000);
+
+      // Show success notification
+      setNotification({
+        type: 'success',
+        message: `🎉 Product activated and visible successfully!`
+      });
+
+    } catch (error) {
+      console.error('❌ Error toggling status:', error);
+      setNotification({
+        type: 'error',
+        message: `❌ ${error.message || 'Failed to update product status. Please try again.'}`
+      });
+    } finally {
+      // Remove loading state
+      setStatusUpdating(prev => ({ ...prev, [productId]: false }));
     }
   };
 
@@ -655,6 +843,11 @@ const ProductManagement = () => {
                     <div>
                       <h4 className="text-xl font-semibold text-gray-800">Product Images</h4>
                       <p className="text-sm text-gray-500">Upload single images, multiple images at once, or add URLs with alt text</p>
+                      <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-xs text-green-700 font-medium">
+                          💡 <strong>Pro Tip:</strong> Use square images (1:1 ratio) with white backgrounds for best mobile display
+                        </p>
+                      </div>
                     </div>
                   </div>
                   <div className="flex space-x-3">
@@ -811,6 +1004,20 @@ const ProductManagement = () => {
                               <p className="text-xs text-gray-500 mt-2 text-center">
                                 Supported formats: JPG, PNG, GIF, WebP (Max 5MB)
                               </p>
+                              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                <h4 className="text-sm font-semibold text-blue-800 mb-2">📱 Mobile-Optimized Image Guidelines:</h4>
+                                <ul className="text-xs text-blue-700 space-y-1">
+                                  <li>• <strong>Recommended Size:</strong> 800x800px or 1:1 aspect ratio</li>
+                                  <li>• <strong>Min Size:</strong> 400x400px</li>
+                                  <li>• <strong>Max Size:</strong> 1200x1200px</li>
+                                  <li>• <strong>Format:</strong> JPG or PNG for best quality</li>
+                                  <li>• <strong>Background:</strong> Use white or transparent background</li>
+                                  <li>• <strong>Product:</strong> Center the product in the image</li>
+                                </ul>
+                                <p className="text-xs text-blue-600 mt-2 font-medium">
+                                  ✅ These dimensions ensure images display properly on mobile without overlapping text
+                                </p>
+                              </div>
                             </div>
                           )}
 
@@ -820,6 +1027,20 @@ const ProductManagement = () => {
                               <p className="text-sm text-gray-600 mb-2 text-center">
                                 Enter the URL of your image
                               </p>
+                              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                <h4 className="text-sm font-semibold text-blue-800 mb-2">📱 Mobile-Optimized Image Guidelines:</h4>
+                                <ul className="text-xs text-blue-700 space-y-1">
+                                  <li>• <strong>Recommended Size:</strong> 800x800px or 1:1 aspect ratio</li>
+                                  <li>• <strong>Min Size:</strong> 400x400px</li>
+                                  <li>• <strong>Max Size:</strong> 1200x1200px</li>
+                                  <li>• <strong>Format:</strong> JPG or PNG for best quality</li>
+                                  <li>• <strong>Background:</strong> Use white or transparent background</li>
+                                  <li>• <strong>Product:</strong> Center the product in the image</li>
+                                </ul>
+                                <p className="text-xs text-blue-600 mt-2 font-medium">
+                                  ✅ These dimensions ensure images display properly on mobile without overlapping text
+                                </p>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -1175,8 +1396,6 @@ const ProductManagement = () => {
                       className="w-full p-3 border border-gray-300 rounded-lg"
                     >
                       <option value="Active">Active</option>
-                      <option value="Inactive">Inactive</option>
-                      <option value="Out of Stock">Out of Stock</option>
                     </select>
                   </div>
                 </div>
@@ -1331,6 +1550,193 @@ const ProductManagement = () => {
                 </div>
               </div>
 
+              {/* Quick Rating Settings */}
+              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                <div className="flex items-center space-x-3 mb-6">
+                  <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="text-xl font-semibold text-gray-800">Quick Rating Setup</h4>
+                    <p className="text-sm text-gray-500">Set initial rating and review count for this product</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">Product Rating *</label>
+                    <div className="flex items-center space-x-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => handleInputChange('quickRating', star)}
+                          className={`text-2xl transition-colors duration-200 ${
+                            formData.quickRating >= star 
+                              ? 'text-yellow-500' 
+                              : 'text-gray-300 hover:text-yellow-400'
+                          }`}
+                        >
+                          ⭐
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-sm text-gray-500 mt-2">
+                      Selected: {formData.quickRating > 0 ? `${formData.quickRating} stars` : 'No rating'}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Number of Reviews</label>
+                    <input
+                      type="number"
+                      value={formData.quickReviewCount}
+                      onChange={(e) => handleInputChange('quickReviewCount', e.target.value)}
+                      className="w-full p-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
+                      placeholder=""
+                    />
+                    <p className="text-sm text-gray-500 mt-2">
+                      This will show as "{formData.quickRating > 0 ? formData.quickRating : '___'} | {formData.quickReviewCount || '___'} Reviews" on frontend
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                  <div className="flex items-start space-x-3">
+                    <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                      <p className="text-sm text-blue-800 font-medium">Quick Setup Tip:</p>
+                      <p className="text-sm text-blue-700 mt-1">
+                        Use this for quick rating setup. For detailed customer reviews, use the "Product Reviews" section below.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Popularity & Urgency Settings */}
+              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                <div className="flex items-center space-x-3 mb-6">
+                  <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="text-xl font-semibold text-gray-800">Popularity & Urgency Settings</h4>
+                    <p className="text-sm text-gray-500">Configure product popularity display and offer countdown timer</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-lg font-bold text-gray-800 mb-3">
+                      👥 Order Count Display <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                        <input
+                          type="number"
+                          value={formData.popularitySettings?.orderCount || ''}
+                          onChange={(e) => {
+                            console.log('Order count changed:', e.target.value);
+                            const value = parseInt(e.target.value) || 0;
+                            console.log('New value:', value);
+                            handleInputChange('popularitySettings', {
+                              ...formData.popularitySettings,
+                              orderCount: value
+                            });
+                          }}
+                          className="w-full p-4 border-3 border-orange-300 rounded-xl focus:ring-4 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 text-lg font-semibold bg-white shadow-lg"
+                          placeholder=""
+                          style={{ fontSize: '18px', fontWeight: 'bold' }}
+                        />
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <span className="text-gray-400 text-sm">📝 Editable</span>
+                      </div>
+                    </div>
+                    <div className="mt-3 p-4 bg-green-50 border-2 border-green-200 rounded-xl">
+                      <p className="text-base text-green-700 font-bold">
+                        📱 Live Preview: "{formData.popularitySettings?.orderCount || '___'} people ordered this in the last 7 days"
+                      </p>
+                      <p className="text-sm text-green-600 mt-2 font-medium">
+                        💡 Type any number you want - no limits!
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      Offer Countdown Duration (minutes)
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="60"
+                      value={formData.popularitySettings?.offerCountdown?.duration || 15}
+                      onChange={(e) => handleInputChange('popularitySettings', {
+                        ...formData.popularitySettings,
+                        offerCountdown: {
+                          ...formData.popularitySettings?.offerCountdown,
+                          duration: parseInt(e.target.value) || 15
+                        }
+                      })}
+                      className="w-full p-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200"
+                      placeholder="e.g., 15"
+                    />
+                    <p className="text-sm text-gray-500 mt-2">
+                      Timer will start when product is saved/updated
+                    </p>
+                  </div>
+                </div>
+
+
+                <div className="mt-6 space-y-4">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="enableCountdown"
+                      checked={formData.popularitySettings?.offerCountdown?.enabled || true}
+                      onChange={(e) => handleInputChange('popularitySettings', {
+                        ...formData.popularitySettings,
+                        offerCountdown: {
+                          ...formData.popularitySettings?.offerCountdown,
+                          enabled: e.target.checked
+                        }
+                      })}
+                      className="mr-3 w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500"
+                    />
+                    <label htmlFor="enableCountdown" className="text-sm font-medium text-gray-700">
+                      Enable Offer Countdown Timer
+                    </label>
+                  </div>
+                  <p className="text-sm text-gray-500 ml-7">
+                    When enabled, shows "Offer ends in Xmin Ysec" on the product page
+                  </p>
+
+                </div>
+
+                <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                  <div className="flex items-start space-x-2">
+                    <svg className="w-5 h-5 text-orange-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                      <div className="text-sm font-medium text-orange-800">How it works</div>
+                      <div className="text-xs text-orange-700 mt-1">
+                        • <strong>Order Count:</strong> Shows the number of people who ordered this product<br/>
+                        • <strong>Offer Countdown:</strong> Starts automatically when product is saved and counts down from the specified duration<br/>
+                        • <strong>Delivery Timer:</strong> Frontend automatically runs a 15-minute timer that restarts when it reaches zero<br/>
+                        • <strong>Timer Reset:</strong> Offer countdown resets each time the product is updated
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Product Reviews */}
               <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-6">
@@ -1341,8 +1747,13 @@ const ProductManagement = () => {
                       </svg>
                     </div>
                     <div>
-                      <h4 className="text-xl font-semibold text-gray-800">Product Reviews</h4>
-                      <p className="text-sm text-gray-500">Manage customer reviews and ratings for this product</p>
+                      <h4 className="text-xl font-semibold text-gray-800">Detailed Reviews (Optional)</h4>
+                      <p className="text-sm text-gray-500">Add unlimited customer reviews with comments</p>
+                      <div className="mt-1 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-xs text-blue-700 font-medium">
+                          ♾️ <strong>Unlimited Reviews:</strong> Add as many reviews as needed using the "Add Review" button
+                        </p>
+                      </div>
                     </div>
                   </div>
                   <button
@@ -1357,6 +1768,15 @@ const ProductManagement = () => {
                   </button>
                 </div>
                 
+                <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                  <p className="text-sm text-gray-600">
+                    <strong>Total Reviews:</strong> {formData.reviews.length} review{formData.reviews.length !== 1 ? 's' : ''} added
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Click "Add Review" to add more, or remove unwanted reviews with the red X button
+                  </p>
+                </div>
+
                 <div className="space-y-4">
                   {formData.reviews.map((review, index) => (
                     <div key={`review-${index}-${review.id}`} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
@@ -1509,7 +1929,7 @@ const ProductManagement = () => {
               <tr className="bg-gradient-to-r from-gray-50 to-gray-100">
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Product</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Category</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Price Range</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Price</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Stock</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Status</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Rating</th>
@@ -1571,8 +1991,17 @@ const ProductManagement = () => {
                   <td className="px-6 py-4 text-sm text-gray-900">
                     {product.sizes && product.sizes.length > 0 ? (
                       <div>
-                        <div className="font-medium">₹{Math.min(...product.sizes.map(s => s.price))} - ₹{Math.max(...product.sizes.map(s => s.price))}</div>
-                        <div className="text-xs text-gray-500">{product.sizes.length} sizes</div>
+                        {product.sizes.length === 1 ? (
+                          <div>
+                            <div className="font-medium text-green-600">₹{product.sizes[0].price}</div>
+                            <div className="text-xs text-gray-500">1 size</div>
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="font-medium text-green-600">₹{Math.min(...product.sizes.map(s => s.price))} - ₹{Math.max(...product.sizes.map(s => s.price))}</div>
+                            <div className="text-xs text-gray-500">{product.sizes.length} sizes</div>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="text-gray-500">No pricing</div>
@@ -1589,9 +2018,29 @@ const ProductManagement = () => {
                     )}
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(product.status)}`}>
-                      {product.status}
-                    </span>
+                    <div className="flex flex-col items-center">
+                      {/* Status Dropdown */}
+                      <div className="relative">
+                        <select
+                          value={product.status}
+                          onChange={(e) => handleStatusToggle(product._id, e.target.value)}
+                          disabled={statusUpdating[product._id] || !isAdminLoggedIn}
+                          className={`px-3 py-1 text-xs font-semibold rounded-full border-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${getStatusColor(product.status)} border-transparent hover:border-gray-300`}
+                        >
+                          <option value="Active">Active</option>
+                        </select>
+                        {statusUpdating[product._id] && (
+                          <div className="absolute -top-1 -right-1">
+                            <div className="animate-spin w-3 h-3 border border-gray-300 border-t-gray-600 rounded-full"></div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Status Description */}
+                      <span className="text-xs text-gray-500 mt-1">
+                        {!isAdminLoggedIn ? 'Login required' : 'Visible on site'}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     <div className="flex items-center">
@@ -1732,6 +2181,28 @@ const ProductManagement = () => {
           </div>
         </div>
       </div>
+
+      {/* Notification */}
+      {notification && (
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 ${
+          notification.type === 'success' 
+            ? 'bg-green-500 text-white' 
+            : 'bg-red-500 text-white'
+        }`}>
+          <div className="flex items-center space-x-2">
+            <span className="text-lg">
+              {notification.type === 'success' ? '✅' : '❌'}
+            </span>
+            <span className="font-medium">{notification.message}</span>
+            <button
+              onClick={() => setNotification(null)}
+              className="ml-4 text-white hover:text-gray-200"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -6,15 +6,15 @@ import {
   FaSignOutAlt, 
   FaBell, 
   FaUser,
-  FaHome,
-  FaShieldAlt,
-  FaEnvelope
+  FaEnvelope,
+  FaCog,
+  FaCreditCard
 } from 'react-icons/fa';
 import ProductManagement from './ProductManagement.jsx';
 import ReviewManagement from './ReviewManagement.jsx';
 import OrderManagement from './OrderManagement.jsx';
-import PageManagement from './PageManagement.jsx';
 import ContactManagement from './ContactManagement.jsx';
+import PaymentSettings from './PaymentSettings.jsx';
 
 const AdminDashboard = ({ adminUser, logout }) => {
   const [activeTab, setActiveTab] = useState('products');
@@ -32,20 +32,6 @@ const AdminDashboard = ({ adminUser, logout }) => {
       description: 'Manage your product catalog',
       color: 'blue'
     },
-      {
-        id: 'pages',
-        name: 'Page Management',
-        icon: FaHome,
-        description: 'Manage all pages and content',
-        color: 'indigo'
-      },
-      {
-        id: 'professional-dashboard',
-        name: 'Professional Dashboard',
-        icon: FaShieldAlt,
-        description: 'Access the new professional admin interface',
-        color: 'indigo'
-      },
     { 
       id: 'orders', 
       name: 'Order Management', 
@@ -61,12 +47,20 @@ const AdminDashboard = ({ adminUser, logout }) => {
       color: 'purple'
     },
     { 
-      id: 'reviews', 
-      name: 'Review Management', 
-      icon: FaStar,
-      description: 'Monitor customer reviews',
-      color: 'yellow'
+      id: 'payments', 
+      name: 'Payment Settings', 
+      icon: FaCreditCard,
+      description: 'Configure UPI ID and payment methods',
+      color: 'indigo'
     }
+    // ,
+    // { 
+    //   id: 'reviews', 
+    //   name: 'Review Management', 
+    //   icon: FaStar,
+    //   description: 'Monitor customer reviews',
+    //   color: 'yellow'
+    // }
   ];
 
   return (
@@ -77,7 +71,7 @@ const AdminDashboard = ({ adminUser, logout }) => {
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center space-x-4">
               <div className="bg-gradient-to-r from-green-600 to-green-700 p-3 rounded-xl">
-                <FaHome className="w-8 h-8 text-white" />
+                <FaCog className="w-8 h-8 text-white" />
               </div>
               <div>
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
@@ -183,24 +177,9 @@ const AdminDashboard = ({ adminUser, logout }) => {
           <div className="flex-1">
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 overflow-hidden">
               {activeTab === 'products' && <ProductManagement />}
-              {activeTab === 'pages' && <PageManagement />}
-        {activeTab === 'professional-dashboard' && (
-          <div className="text-center py-12">
-            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-8 text-white max-w-md mx-auto">
-              <FaShieldAlt className="text-6xl mx-auto mb-4" />
-              <h3 className="text-2xl font-bold mb-4">Professional Dashboard</h3>
-              <p className="mb-6">Experience the new professional admin interface with enhanced features and modern design.</p>
-              <a 
-                href="/admin-pro" 
-                className="bg-white text-indigo-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors inline-block"
-              >
-                Access Professional Dashboard
-              </a>
-            </div>
-          </div>
-        )}
               {activeTab === 'orders' && <OrderManagement />}
               {activeTab === 'contacts' && <ContactManagement />}
+              {activeTab === 'payments' && <PaymentSettings />}
               {activeTab === 'reviews' && <ReviewManagement />}
             </div>
           </div>

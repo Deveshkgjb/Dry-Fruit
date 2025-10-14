@@ -14,9 +14,9 @@ const PageManagement = () => {
   const [pageContent, setPageContent] = useState({});
   const [selectedCategory, setSelectedCategory] = useState('homepage');
   const [showCategorySelection, setShowCategorySelection] = useState(false);
-  const [dynamicProductPages, setDynamicProductPages] = useState([]);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [logoRefreshKey, setLogoRefreshKey] = useState(0);
 
   // Load page content on component mount
   useEffect(() => {
@@ -26,18 +26,61 @@ const PageManagement = () => {
   const loadPageContent = async () => {
     try {
       setLoading(true);
-      const [content, productPages] = await Promise.all([
-        pageAPI.getAllPages(),
-        pageAPI.getProductPages()
-      ]);
-      setPageContent(content);
-      setDynamicProductPages(productPages.pages || []);
+      console.log('🔄 Loading page content...');
+      
+      const content = await pageAPI.getAllPages();
+      
+      console.log('📄 Page content loaded:', content);
+      console.log('📄 Navbar content:', content.navbar);
+      console.log('📄 Navbar search placeholder:', content.navbar?.searchPlaceholder);
+      console.log('📄 Navbar categories:', content.navbar?.categories);
+      
+      // Ensure navbar data is available with fallbacks
+      const enhancedContent = {
+        ...content,
+        navbar: {
+          logo: { image: "/logo.avif", alt: "Mufindryfruit Logo" },
+          searchPlaceholder: "Search For Hazelnut",
+          categories: {
+            nuts: {
+              title: "🥜 Nuts",
+              items: ["Almonds", "Cashews", "Pistachios", "Walnuts", "Brazil Nuts", "Peanuts", "devesh"]
+            },
+            driedFruits: {
+              title: "🍇 Dried Fruits", 
+              items: ["Raisins", "Anjeer (Figs)", "Apricots", "Prunes", "Kiwi", "Mango", "Raghu"]
+            },
+            berries: {
+              title: "🍓 Berries",
+              items: ["Blueberries", "Cranberries", "Strawberries"]
+            },
+            dates: {
+              title: "🌴 Dates",
+              items: ["Omani", "Queen Kalmi", "Arabian", "Ajwa"]
+            },
+            seeds: {
+              title: "🌱 Seeds",
+              items: ["Chia Seeds", "Flax Seeds", "Pumpkin Seeds", "Sunflower Seeds"]
+            },
+            mixes: {
+              title: "🌿 Mixes",
+              items: ["Fitness Mix", "Roasted Party Mix", "Tropical Mix"]
+            }
+          },
+          ...content.navbar
+        }
+      };
+      
+      console.log('📄 Enhanced content with fallbacks:', enhancedContent.navbar);
+      
+      setPageContent(enhancedContent);
+      
+      
     } catch (error) {
       console.error('Error loading page content:', error);
       showError('Failed to load page content, using fallback data');
       // Use fallback data when API fails
       setPageContent(fallbackPageContent);
-      setDynamicProductPages([]);
     } finally {
       setLoading(false);
     }
@@ -123,19 +166,19 @@ const PageManagement = () => {
           placeholder: "Enter your email"
         },
         socialMedia: {
-          facebook: "https://facebook.com/happilo",
-          instagram: "https://instagram.com/happilo",
-          twitter: "https://twitter.com/happilo",
-          youtube: "https://youtube.com/happilo"
+          facebook: "https://facebook.com/mufindryfruit",
+          instagram: "https://instagram.com/mufindryfruit",
+          twitter: "https://twitter.com/mufindryfruit",
+          youtube: "https://youtube.com/mufindryfruit"
         },
         paymentMethods: ["Visa", "Mastercard", "PayPal", "UPI", "Net Banking"],
-        copyright: "© 2024 Happilo. All rights reserved."
+        copyright: "© 2024 Mufindryfruit. All rights reserved."
       }
     },
     navbar: {
       logo: {
         image: "/logo.avif",
-        alt: "Happilo Logo"
+        alt: "Mufindryfruit Logo"
       },
       searchPlaceholder: "Search For Hazelnut",
       categories: {
@@ -203,7 +246,6 @@ const PageManagement = () => {
     { id: 'homepage', name: 'Homepage', icon: '🏠', description: 'Manage homepage content and sections' },
     { id: 'navbar', name: 'Navigation', icon: '🧭', description: 'Configure navigation menu and categories' },
     { id: 'cart', name: 'Cart Page', icon: '🛒', description: 'Customize cart page layout and content' },
-    { id: 'product-pages', name: 'Product Pages', icon: '📦', description: 'Manage product categories and individual products' },
     { id: 'admin-pages', name: 'Admin Pages', icon: '⚙️', description: 'Configure admin dashboard settings' }
   ];
 
@@ -253,29 +295,45 @@ const PageManagement = () => {
   const handleEdit = async (section, data) => {
     console.log('🔧 handleEdit called:', { section, data });
 
-    if (!data && section !== 'newProduct') {
-      showError('No data available for this section');
-      return;
+    // Set default data for sections that might not have data
+    let defaultData = data;
+    if (!data) {
+      if (section === 'search') {
+        defaultData = { placeholder: '' };
+      } else if (section === 'categories') {
+        defaultData = {};
+      } else if (section === 'doYouKnow') {
+        defaultData = {
+          title: 'Do You Know?',
+          subtitle: 'Amazing facts about our premium dry fruits',
+          facts: [
+            { icon: '🥜', title: 'Rich in Calcium', description: 'Almonds contain more calcium than any other nut' },
+            { icon: '💪', title: 'Omega-3 Powerhouse', description: 'Walnuts are the only nut with significant amounts of omega-3 fatty acids' },
+            { icon: '🌰', title: 'Not Actually Nuts', description: 'Cashews are actually seeds, not nuts!' },
+            { icon: '❤️', title: 'Heart Healthy', description: 'Pistachios help reduce cholesterol levels' }
+          ]
+        };
+      } else {
+        showError('No data available for this section');
+        return;
+      }
+    }
+    
+    // Convert string format facts to object format for doYouKnow section
+    if (section === 'doYouKnow' && defaultData && defaultData.facts) {
+      const icons = ["🥜", "💪", "❤️", "🧠", "🛡️", "⚡"];
+      if (defaultData.facts.length > 0 && typeof defaultData.facts[0] === 'string') {
+        defaultData.facts = defaultData.facts.map((factText, index) => ({
+          icon: icons[index] || "📝",
+          title: factText.split(':')[0] || `Fact ${index + 1}`,
+          description: factText.includes(':') ? factText.split(':').slice(1).join(':').trim() : factText
+        }));
+      }
     }
 
     setEditingSection(section);
     
-    // Load existing data for product pages
-    if (section === 'productPage' || section === 'productContent') {
-      try {
-        setLoading(true);
-        const existingData = await pageAPI.getProductPage(data.name);
-        setFormData({ ...data, ...existingData });
-      } catch (error) {
-        console.error('Error loading product data:', error);
-        setFormData(data);
-        showError('Failed to load existing data, using defaults');
-      } finally {
-        setLoading(false);
-      }
-    } else {
-      setFormData(data);
-    }
+    setFormData(defaultData);
     
     setShowEditModal(true);
   };
@@ -285,22 +343,7 @@ const PageManagement = () => {
     
     try {
       // Handle different types of saves
-      if (editingSection === 'newProduct') {
-        // Create new product page
-        await pageAPI.createProductPage(formData);
-        showSuccess(`New product page "${formData.name}" created successfully!`);
-        // Reload product pages
-        const productPages = await pageAPI.getProductPages();
-        setDynamicProductPages(productPages.pages || []);
-      } else if (editingSection === 'productPage') {
-        // Update existing product page
-        await pageAPI.updateProductPage(formData.name, formData);
-        showSuccess(`Product page "${formData.name}" updated successfully!`);
-      } else if (editingSection === 'productContent') {
-        // Update product content
-        await pageAPI.updateProductContent(formData.name, formData);
-        showSuccess(`Product content for "${formData.name}" updated successfully!`);
-      } else if (['dashboard', 'productManagement', 'orderManagement', 'userManagement', 'analytics', 'settings'].includes(editingSection)) {
+      if (['dashboard', 'productManagement', 'orderManagement', 'userManagement', 'analytics', 'settings'].includes(editingSection)) {
         // Handle admin page updates
         console.log('Updating admin page:', editingSection, formData);
         showSuccess(`Admin page "${formData.name || editingSection}" settings updated successfully!`);
@@ -331,6 +374,12 @@ const PageManagement = () => {
         if (editingSection === 'logo') {
           window.dispatchEvent(new CustomEvent('pageContentUpdated'));
         }
+        
+        // Dispatch event to update frontend sections in real-time
+        if (['doYouKnow', 'hero', 'offerBar', 'footer'].includes(editingSection)) {
+          window.dispatchEvent(new CustomEvent('pageContentUpdated'));
+          console.log(`🔄 Dispatched pageContentUpdated event for ${editingSection}`);
+        }
       }
       
       setShowEditModal(false);
@@ -354,7 +403,7 @@ const PageManagement = () => {
 
     // Show file info
     const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
-    console.log(`Uploading file: ${file.name} (${fileSizeMB}MB, ${file.type})`);
+    console.log(`🔄 Uploading file: ${file.name} (${fileSizeMB}MB, ${file.type})`);
 
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/avif'];
@@ -374,9 +423,19 @@ const PageManagement = () => {
       const formData = new FormData();
       formData.append('image', file);
 
+      console.log('📤 Sending logo upload request...');
+      
       const response = await uploadAPI.uploadImage(formData, true); // true = isLogo
       
-      if (response.success) {
+      console.log('📥 Upload response:', response);
+      console.log('📥 Response type:', typeof response);
+      console.log('📥 Response keys:', Object.keys(response || {}));
+      console.log('📥 Response.success:', response?.success);
+      console.log('📥 Response.imageUrl:', response?.imageUrl);
+      console.log('📥 Response.url:', response?.url);
+      
+      // Check if upload was successful (handle different response formats)
+      if (response && (response.success === true || response.imageUrl || response.url)) {
         // Update the form data with the new image URL
         setFormData(prev => ({
           ...prev,
@@ -384,27 +443,46 @@ const PageManagement = () => {
         }));
         
         // Update the page content immediately with the new logo
+        const updatedLogo = {
+          ...pageContent.navbar?.logo,
+          image: response.imageUrl || response.url
+        };
+        
         setPageContent(prev => ({
           ...prev,
           navbar: {
             ...prev.navbar,
-            logo: {
-              ...prev.navbar?.logo,
-              image: response.imageUrl || response.url
-            }
+            logo: updatedLogo
           }
         }));
+        
+        // Force logo refresh in admin panel
+        setLogoRefreshKey(prev => prev + 1);
+        
+        // Save the logo to localStorage via pageAPI
+        console.log('💾 Saving logo to database:', updatedLogo);
+        const saveResult = await pageAPI.updatePageContent('navbar', 'logo', updatedLogo);
+        console.log('✅ Logo save result:', saveResult);
+        
+        // Refresh the page content to show updated logo in admin panel
+        setTimeout(() => {
+          loadPageContent();
+        }, 500);
         
         // Dispatch event to update frontend navbar immediately
         window.dispatchEvent(new CustomEvent('pageContentUpdated'));
         
-        showSuccess(`Logo uploaded successfully! (${fileSizeMB}MB)`);
+        showSuccess(`🎉 Logo uploaded successfully! (${fileSizeMB}MB)`);
+        console.log('✅ Logo upload completed successfully');
       } else {
-        showError(response.message || 'Failed to upload logo');
+        console.error('❌ Upload failed:', response);
+        console.error('❌ Response structure:', JSON.stringify(response, null, 2));
+        showError(response?.message || 'Failed to upload logo - no image URL received');
       }
     } catch (error) {
-      console.error('Upload error:', error);
-      showError('Failed to upload logo. Please try again.');
+      console.error('❌ Upload error:', error);
+      console.error('❌ Error details:', error.message, error.stack);
+      showError(`Failed to upload logo: ${error.message}`);
     } finally {
       setUploadingFile(false);
     }
@@ -459,80 +537,8 @@ const PageManagement = () => {
     }));
   };
 
-  const handleDeleteProduct = async (productName) => {
-    if (!window.confirm(`Are you sure you want to delete the "${productName}" product page? This action cannot be undone.`)) {
-      return;
-    }
 
-    setLoading(true);
-    
-    try {
-      await pageAPI.deleteProductPage(productName);
-      showSuccess(`Product page "${productName}" deleted successfully!`);
-      // Reload the page content to refresh the list
-      loadPageContent();
-    } catch (error) {
-      console.error('Error deleting product page:', error);
-      showError('Failed to delete product page');
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const handleAddNewProduct = () => {
-    const newProduct = {
-      id: Date.now().toString(),
-      name: '',
-      description: '',
-      price: '',
-      weight: '',
-      image: '',
-      isBestSeller: false,
-      isPopular: false,
-      stock: 0,
-      category: formData.category || 'Nuts'
-    };
-    
-    setFormData(prev => ({
-      ...prev,
-      products: [...(prev.products || []), newProduct]
-    }));
-  };
-
-  const handleEditProduct = (product, index) => {
-    setEditingSection('editIndividualProduct');
-    setFormData(prev => ({
-      ...prev,
-      editingProductIndex: index,
-      editingProduct: { ...product }
-    }));
-  };
-
-  const handleDeleteProductItem = (index) => {
-    if (!window.confirm('Are you sure you want to delete this product?')) {
-      return;
-    }
-    
-    setFormData(prev => ({
-      ...prev,
-      products: prev.products.filter((_, i) => i !== index)
-    }));
-  };
-
-  const handleSaveIndividualProduct = () => {
-    const { editingProductIndex, editingProduct, ...restFormData } = formData;
-    
-    setFormData(prev => ({
-      ...prev,
-      products: prev.products.map((product, index) => 
-        index === editingProductIndex ? editingProduct : product
-      ),
-      editingProductIndex: null,
-      editingProduct: null
-    }));
-    
-    setEditingSection('productContent');
-  };
 
   const handleCategorySelect = (categoryId) => {
     setSelectedCategory(categoryId);
@@ -701,13 +707,26 @@ const PageManagement = () => {
           <p className="text-gray-600">{pageContent.homepage?.doYouKnow?.subtitle || 'No subtitle set'}</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {(pageContent.homepage?.doYouKnow?.facts || []).map((fact, index) => (
-            <div key={index} className="p-4 border border-gray-200 rounded-lg">
-              <div className="text-2xl mb-2">{fact.icon || '📝'}</div>
-              <h5 className="font-medium text-gray-800">{fact.title || 'No title'}</h5>
-              <p className="text-sm text-gray-600">{fact.description || 'No description'}</p>
-            </div>
-          ))}
+          {(pageContent.homepage?.doYouKnow?.facts || []).map((fact, index) => {
+            // Handle both string format and object format
+            if (typeof fact === 'string') {
+              return (
+                <div key={index} className="p-4 border border-gray-200 rounded-lg">
+                  <div className="text-2xl mb-2">📝</div>
+                  <h5 className="font-medium text-gray-800">Fact {index + 1}</h5>
+                  <p className="text-sm text-gray-600">{fact}</p>
+                </div>
+              );
+            } else {
+              return (
+                <div key={index} className="p-4 border border-gray-200 rounded-lg">
+                  <div className="text-2xl mb-2">{fact.icon || '📝'}</div>
+                  <h5 className="font-medium text-gray-800">{fact.title || 'No title'}</h5>
+                  <p className="text-sm text-gray-600">{fact.description || 'No description'}</p>
+                </div>
+              );
+            }
+          })}
         </div>
       </div>
 
@@ -744,16 +763,29 @@ const PageManagement = () => {
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-800">Logo</h3>
-          <button
-            onClick={() => handleEdit('logo', pageContent.navbar.logo)}
-            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
-          >
-            Edit
-          </button>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => {
+                setLogoRefreshKey(prev => prev + 1);
+                loadPageContent();
+              }}
+              className="bg-gray-500 text-white px-3 py-2 rounded-lg hover:bg-gray-600 transition-colors text-sm"
+              title="Refresh logo display"
+            >
+              🔄
+            </button>
+            <button
+              onClick={() => handleEdit('logo', pageContent.navbar.logo)}
+              className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              Edit
+            </button>
+          </div>
         </div>
         <div className="flex items-center space-x-4">
           <div className="relative">
             <img 
+              key={`admin-logo-${logoRefreshKey}`}
               src={pageContent.navbar?.logo?.image || '/placeholder.png'} 
               alt={pageContent.navbar?.logo?.alt || 'Logo'} 
               className="w-16 h-16 object-contain border border-gray-200 rounded-lg bg-gray-50" 
@@ -784,7 +816,7 @@ const PageManagement = () => {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-800">Search Bar</h3>
           <button
-            onClick={() => handleEdit('search', { placeholder: pageContent.navbar.searchPlaceholder })}
+            onClick={() => handleEdit('search', { placeholder: pageContent.navbar?.searchPlaceholder || '' })}
             className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
           >
             Edit
@@ -795,26 +827,19 @@ const PageManagement = () => {
 
       {/* Categories */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-800">Categories</h3>
-          <button
-            onClick={() => handleEdit('categories', pageContent.navbar.categories)}
-            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
-          >
-            Edit
-          </button>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {Object.entries(pageContent.navbar?.categories || {}).map(([key, category]) => (
-            <div key={key} className="border border-gray-200 rounded-lg p-4">
-              <h5 className="font-medium text-gray-800 mb-2">{category?.title || 'No title'}</h5>
-              <ul className="space-y-1">
-                {(category?.items || []).map((item, index) => (
-                  <li key={index} className="text-sm text-gray-600">{item || 'No item'}</li>
-                ))}
-              </ul>
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">Categories</h3>
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <div className="text-yellow-600 mr-3">⚠️</div>
+              <div>
+                <p className="text-yellow-800 font-medium">Categories are disabled</p>
+                <p className="text-yellow-700 text-sm mt-1">
+                  All category pages have been removed. The "Shop by Categories" dropdown will show "No categories available".
+                </p>
+              </div>
             </div>
-          ))}
+          </div>
         </div>
       </div>
     </div>
@@ -913,125 +938,6 @@ const PageManagement = () => {
     </div>
   );
 
-  const renderProductPagesContent = () => (
-    <div className="space-y-6">
-      {/* Add New Product Button */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-800">Product Pages Management</h3>
-          <button
-            onClick={() => handleEdit('newProduct', {})}
-            className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center space-x-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            <span>Add New Product Page</span>
-          </button>
-        </div>
-        <p className="text-gray-600 mb-4">Manage individual product category pages and their content.</p>
-      </div>
-
-      {/* Existing Product Pages */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Existing Product Pages</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Static Product Pages */}
-          {[
-            { name: 'Almonds', category: 'Nuts', route: '/almonds', description: 'Premium California Almonds' },
-            { name: 'Cashews', category: 'Nuts', route: '/cashews', description: 'Premium Cashew Nuts' },
-            { name: 'Pistachios', category: 'Nuts', route: '/pistachios', description: 'Premium Pistachio Nuts' },
-            { name: 'Walnuts', category: 'Nuts', route: '/walnuts', description: 'Premium Walnut Kernels' },
-            { name: 'Brazil Nuts', category: 'Nuts', route: '/brazil-nuts', description: 'Premium Brazil Nuts' },
-            { name: 'Peanuts', category: 'Nuts', route: '/peanuts', description: 'Premium Peanut Kernels' },
-            { name: 'Raisins', category: 'Dried Fruits', route: '/raisins', description: 'Premium Black Raisins' },
-            { name: 'Anjeer', category: 'Dried Fruits', route: '/anjeer', description: 'Premium Anjeer (Figs)' },
-            { name: 'Apricots', category: 'Dried Fruits', route: '/apricots', description: 'Premium Dried Apricots' },
-            { name: 'Prunes', category: 'Dried Fruits', route: '/prunes', description: 'Premium Dried Prunes' },
-            { name: 'Kiwi', category: 'Dried Fruits', route: '/kiwi', description: 'Premium Dried Kiwi' },
-            { name: 'Mango', category: 'Dried Fruits', route: '/mango', description: 'Premium Dried Mango' }
-          ].map((product) => (
-            <div key={product.name} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-              <div className="mb-3">
-                <h5 className="font-medium text-gray-800 mb-1">{product.name}</h5>
-                <p className="text-xs text-blue-600 mb-1">{product.category}</p>
-                <p className="text-sm text-gray-600 mb-2">{product.description}</p>
-                <p className="text-xs text-gray-500">Route: {product.route}</p>
-              </div>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => handleEdit('productPage', product)}
-                  className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 transition-colors flex-1"
-                >
-                  Edit Page
-                </button>
-                <button
-                  onClick={() => handleEdit('productContent', product)}
-                  className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600 transition-colors flex-1"
-                >
-                  Edit Content
-                </button>
-              </div>
-              <div className="flex space-x-2 mt-2">
-                <button
-                  onClick={() => window.open(product.route, '_blank')}
-                  className="bg-purple-500 text-white px-3 py-1 rounded text-sm hover:bg-purple-600 transition-colors flex-1"
-                >
-                  Preview Page
-                </button>
-                <button
-                  onClick={() => handleDeleteProduct(product.name)}
-                  className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition-colors flex-1"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
-          
-          {/* Dynamic Product Pages */}
-          {dynamicProductPages.map((product) => (
-            <div key={product.name} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-              <div className="mb-3">
-                <h5 className="font-medium text-gray-800 mb-1">{product.name}</h5>
-                <p className="text-xs text-blue-600 mb-1">{product.category}</p>
-                <p className="text-sm text-gray-600 mb-2">{product.description}</p>
-                <p className="text-xs text-gray-500">Route: {product.route}</p>
-              </div>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => handleEdit('productPage', product)}
-                  className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 transition-colors flex-1"
-                >
-                  Edit Page
-                </button>
-                <button
-                  onClick={() => handleEdit('productContent', product)}
-                  className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600 transition-colors flex-1"
-                >
-                  Edit Content
-                </button>
-              </div>
-              <div className="flex space-x-2 mt-2">
-                <button
-                  onClick={() => window.open(product.route, '_blank')}
-                  className="bg-purple-500 text-white px-3 py-1 rounded text-sm hover:bg-purple-600 transition-colors flex-1"
-                >
-                  Preview Page
-                </button>
-                <button
-                  onClick={() => handleDeleteProduct(product.name)}
-                  className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition-colors flex-1"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
 
   const renderAdminPagesContent = () => (
     <div className="space-y-6">
@@ -1270,7 +1176,7 @@ const PageManagement = () => {
                     value={formData.alt || ''}
                     onChange={(e) => handleInputChange('alt', e.target.value)}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Happilo Logo"
+                    placeholder="Mufindryfruit Logo"
                   />
                   <p className="text-xs text-gray-500 mt-1">Alternative text for accessibility</p>
                 </div>
@@ -2060,7 +1966,7 @@ const PageManagement = () => {
                         value={formData.socialMedia?.facebook || ''}
                         onChange={(e) => handleInputChange('socialMedia', { ...formData.socialMedia, facebook: e.target.value })}
                         className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="https://facebook.com/happilo"
+                        placeholder="https://facebook.com/mufindryfruit"
                       />
                     </div>
                     <div>
@@ -2070,7 +1976,7 @@ const PageManagement = () => {
                         value={formData.socialMedia?.instagram || ''}
                         onChange={(e) => handleInputChange('socialMedia', { ...formData.socialMedia, instagram: e.target.value })}
                         className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="https://instagram.com/happilo"
+                        placeholder="https://instagram.com/mufindryfruit"
                       />
                     </div>
                     <div>
@@ -2080,7 +1986,7 @@ const PageManagement = () => {
                         value={formData.socialMedia?.twitter || ''}
                         onChange={(e) => handleInputChange('socialMedia', { ...formData.socialMedia, twitter: e.target.value })}
                         className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="https://twitter.com/happilo"
+                        placeholder="https://twitter.com/mufindryfruit"
                       />
                     </div>
                     <div>
@@ -2090,7 +1996,7 @@ const PageManagement = () => {
                         value={formData.socialMedia?.youtube || ''}
                         onChange={(e) => handleInputChange('socialMedia', { ...formData.socialMedia, youtube: e.target.value })}
                         className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="https://youtube.com/happilo"
+                        placeholder="https://youtube.com/mufindryfruit"
                       />
                     </div>
                   </div>
@@ -2104,7 +2010,7 @@ const PageManagement = () => {
                     value={formData.copyright || ''}
                     onChange={(e) => handleInputChange('copyright', e.target.value)}
                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="© 2024 Happilo. All rights reserved."
+                    placeholder="© 2024 Mufindryfruit. All rights reserved."
                   />
                 </div>
               </div>
@@ -2291,8 +2197,6 @@ const PageManagement = () => {
         return renderNavbarContent();
       case 'cart':
         return renderCartContent();
-      case 'product-pages':
-        return renderProductPagesContent();
       case 'admin-pages':
         return renderAdminPagesContent();
       default:

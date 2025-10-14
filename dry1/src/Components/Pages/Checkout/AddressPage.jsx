@@ -28,10 +28,47 @@ const AddressPage = () => {
   const [cartItems, setCartItems] = useState([]);
 
   useEffect(() => {
-    // Load cart items from localStorage
-    const savedCart = localStorage.getItem('cart');
-    if (savedCart) {
-      setCartItems(JSON.parse(savedCart));
+    // Scroll to top when component mounts - multiple attempts to ensure it works
+    window.scrollTo(0, 0);
+    
+    // Additional scroll to top after a short delay to handle any async rendering
+    const scrollToTopTimer = setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 100);
+    
+    // Force scroll to top when page is fully loaded
+    const handleLoad = () => {
+      window.scrollTo(0, 0);
+    };
+    
+    window.addEventListener('load', handleLoad);
+    
+    return () => {
+      clearTimeout(scrollToTopTimer);
+      window.removeEventListener('load', handleLoad);
+    };
+    
+    // Load cart items - check for direct order first, then regular cart
+    const directOrder = sessionStorage.getItem('directOrder');
+    
+    if (directOrder) {
+      try {
+        const orderItems = JSON.parse(directOrder);
+        setCartItems(orderItems);
+      } catch (error) {
+        console.error('Error parsing direct order:', error);
+        // Fallback to regular cart
+        const savedCart = localStorage.getItem('cart');
+        if (savedCart) {
+          setCartItems(JSON.parse(savedCart));
+        }
+      }
+    } else {
+      // Load regular cart items from localStorage
+      const savedCart = localStorage.getItem('cart');
+      if (savedCart) {
+        setCartItems(JSON.parse(savedCart));
+      }
     }
   }, []);
 
@@ -151,9 +188,8 @@ const AddressPage = () => {
         createdAt: new Date().toISOString()
       };
       
-      console.log('Saving address data:', addressData);
       localStorage.setItem('shippingAddress', JSON.stringify(addressData));
-      showSuccess('Address saved successfully!');
+      // showSuccess('Address saved successfully!');
       navigate('/payment');
     } else {
       showError('Please fill all required fields correctly');
@@ -193,7 +229,7 @@ const AddressPage = () => {
         </div>
 
         <div className="bg-white rounded-lg shadow-lg p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">Delivery Address</h1>
+          <h1 className="text-gray-900 mb-3 font-bold whitespace-nowrap" style={{fontSize: '20px'}}>Delivery Address</h1>
           
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Personal Information */}
@@ -414,17 +450,23 @@ const AddressPage = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-between pt-6">
+            <div className="flex justify-between mr-  pt-6">
               <button
                 type="button"
                 onClick={() => navigate('/cart')}
-                className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+                className="px-6 py-2 rounded-md transition-colors"
+                style={{ backgroundColor: '#2563eb', color: 'white' }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#1d4ed8'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#2563eb'}
               >
                 Back to Cart
               </button>
               <button
                 type="submit"
-                className="px-8 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium"
+                className="px-8 py-2 ml-5 rounded-md transition-colors font-medium"
+                style={{ backgroundColor: '#2563eb', color: 'white' }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#1d4ed8'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#2563eb'}
               >
                 Continue to Payment
               </button>

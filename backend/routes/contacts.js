@@ -47,14 +47,10 @@ router.post('/', [
 });
 
 // @route   GET /api/contacts
-// @desc    Get all contact messages (Admin only)
-// @access  Private
-router.get('/', auth, async (req, res) => {
+// @desc    Get all contact messages (Public - for admin panel)
+// @access  Public
+router.get('/', async (req, res) => {
   try {
-    // Check if user is admin
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
-    }
 
     const { status, priority, page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
     
@@ -96,14 +92,10 @@ router.get('/', auth, async (req, res) => {
 });
 
 // @route   GET /api/contacts/:id
-// @desc    Get a specific contact message (Admin only)
-// @access  Private
-router.get('/:id', auth, async (req, res) => {
+// @desc    Get a specific contact message (Public - for admin panel)
+// @access  Public
+router.get('/:id', async (req, res) => {
   try {
-    // Check if user is admin
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
-    }
 
     const contact = await Contact.findById(req.params.id);
     if (!contact) {
@@ -119,18 +111,14 @@ router.get('/:id', auth, async (req, res) => {
 });
 
 // @route   PUT /api/contacts/:id/status
-// @desc    Update contact status (Admin only)
-// @access  Private
-router.put('/:id/status', auth, [
+// @desc    Update contact status (Public - for admin panel)
+// @access  Public
+router.put('/:id/status', [
   body('status').isIn(['new', 'read', 'replied', 'closed']).withMessage('Invalid status'),
   body('priority').optional().isIn(['low', 'medium', 'high', 'urgent']).withMessage('Invalid priority'),
   body('adminNotes').optional().trim()
 ], async (req, res) => {
   try {
-    // Check if user is admin
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
-    }
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -174,14 +162,10 @@ router.put('/:id/status', auth, [
 });
 
 // @route   DELETE /api/contacts/:id
-// @desc    Delete a contact message (Admin only)
-// @access  Private
-router.delete('/:id', auth, async (req, res) => {
+// @desc    Delete a contact message (Public - for admin panel)
+// @access  Public
+router.delete('/:id', async (req, res) => {
   try {
-    // Check if user is admin
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
-    }
 
     const contact = await Contact.findByIdAndDelete(req.params.id);
     if (!contact) {
@@ -197,14 +181,10 @@ router.delete('/:id', auth, async (req, res) => {
 });
 
 // @route   GET /api/contacts/stats/summary
-// @desc    Get contact statistics (Admin only)
-// @access  Private
-router.get('/stats/summary', auth, async (req, res) => {
+// @desc    Get contact statistics (Public - for admin panel)
+// @access  Public
+router.get('/stats/summary', async (req, res) => {
   try {
-    // Check if user is admin
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
-    }
 
     const stats = await Contact.aggregate([
       {

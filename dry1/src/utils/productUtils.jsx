@@ -119,7 +119,7 @@ export const renderRatingDisplay = (product) => {
         {renderStars(rating)}
       </div>
       <span className="text-xs text-gray-600">
-        {rating.average} | {rating.count} Rating{rating.count !== 1 ? 's' : ''}
+        {rating.average} | {rating.count} Review{rating.count !== 1 ? 's' : ''}
       </span>
     </div>
   );
@@ -141,8 +141,21 @@ export const renderSafeRating = (product) => {
         {renderStars(ratingValue)}
       </div>
       <span className="text-xs text-gray-600">
-        {ratingValue} | {ratingCount} Rating{ratingCount !== 1 ? 's' : ''}
+        {ratingValue} | {ratingCount} Review{ratingCount !== 1 ? 's' : ''}
       </span>
     </div>
   );
+};
+
+// Safe image error handler to prevent infinite loops
+export const createSafeImageErrorHandler = (fallbackSrc) => {
+  return (e) => {
+    const currentSrc = e.target.src;
+    const fallbackUrl = fallbackSrc.startsWith('http') ? fallbackSrc : window.location.origin + fallbackSrc;
+    
+    // Only set fallback if not already set to prevent infinite loop
+    if (currentSrc !== fallbackUrl) {
+      e.target.src = fallbackSrc;
+    }
+  };
 };

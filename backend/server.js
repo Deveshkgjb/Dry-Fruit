@@ -15,6 +15,8 @@ const managerRoutes = require('./routes/manager');
 const uploadRoutes = require('./routes/upload');
 const configRoutes = require('./routes/config');
 const contactRoutes = require('./routes/contacts');
+const pageContentRoutes = require('./routes/pageContent');
+const paymentSettingsRoutes = require('./routes/paymentSettings');
 
 // Load environment variables
 dotenv.config();
@@ -30,15 +32,21 @@ const app = express();
 const getAllowedOrigins = () => {
   const defaultOrigins = [
     'http://localhost:5173',  // Vite dev server
+    'http://localhost:5176',  // Vite dev server (current)
     'http://localhost:3000',  // React dev server
     'http://localhost:5174',  // Alternative Vite port
     'http://localhost:5175',  // Alternative Vite port
     'http://127.0.0.1:5173',
+    'http://127.0.0.1:5176',
     'http://127.0.0.1:3000',
     'http://127.0.0.1:5174',
     'http://127.0.0.1:5175',
     'http://192.168.1.8:5173',  // Network access for mobile
-    'http://192.168.1.8:5176'   // Network access for mobile
+    'http://192.168.1.8:5176',  // Network access for mobile
+    'http://192.168.1.8:5174',  // Additional mobile ports
+    'http://192.168.1.8:5175',  // Additional mobile ports
+    'http://0.0.0.0:5173',      // Wildcard access
+    'http://0.0.0.0:5176'       // Wildcard access
   ];
   
   // Add environment-specific origins
@@ -76,8 +84,8 @@ const corsOptions = {
 
 // Middleware
 app.use(cors(corsOptions));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '50mb' })); // Increased from 10mb to 50mb
+app.use(express.urlencoded({ extended: true, limit: '50mb' })); // Increased from 10mb to 50mb
 
 // Static files for uploaded images
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -109,7 +117,30 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/manager', managerRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/contacts', contactRoutes);
+app.use('/api/page-content', pageContentRoutes);
+app.use('/api/payment-settings', paymentSettingsRoutes);
 app.use('/api', configRoutes);
+
+// Handle base API endpoint (for CORS preflight requests)
+app.get('/api', (req, res) => {
+  res.json({ 
+    message: 'Happilo E-commerce API Server is running!',
+    version: '1.0.0',
+    endpoints: [
+      '/api/config',
+      '/api/products',
+      '/api/categories',
+      '/api/orders',
+      '/api/auth',
+      '/api/page-content'
+    ]
+  });
+});
+
+// Handle OPTIONS requests to base API endpoint (CORS preflight)
+app.options('/api', (req, res) => {
+  res.status(200).end();
+});
 
 // Basic route
 app.get('/', (req, res) => {

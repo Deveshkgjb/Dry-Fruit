@@ -1,98 +1,119 @@
 import { FaStar } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
-import { cartAPI, productsAPI } from '../../services/api.js';
+import { useState, useEffect, useRef } from 'react';
+import { productsAPI } from '../../services/api.js';
 import { useNotification } from '../Common/NotificationProvider.jsx';
 import { getImageUrl } from '../../utils/urls.js';
 import { initializeConfig } from '../../config/environment.js';
+import config from '../../config/environment.js';
 
 const ValueCombos = () => {
   const { showSuccess, showError } = useNotification();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const isMountedRef = useRef(true);
 
   // Fetch value combo products from backend
   useEffect(() => {
+    console.log('🔄 ValueCombos component mounted - starting data fetch');
+    
     const fetchValueComboProducts = async () => {
       try {
         setLoading(true);
+        
         // Initialize config first to ensure correct API URL
         await initializeConfig();
+        console.log('🔍 API Base URL:', config.API_BASE_URL);
+        
+        // Use productsAPI to get products (same as other components)
         const response = await productsAPI.getAll({ limit: 100 });
         const allProducts = response.products || [];
+        console.log('📊 Total products from API:', allProducts.length);
+        console.log('🔍 Raw API response:', response);
+        console.log('🔍 First few products:', allProducts.slice(0, 3));
         
-        console.log('🔍 All products from API:', allProducts);
-        console.log('📊 Total products found:', allProducts.length);
-        
-        // Filter products that are marked as value combos
+        // Filter for value combo products
         const valueComboProducts = allProducts.filter(product => {
-          const isValueCombo = product.isValueCombo || 
-                              product.displaySections?.valueCombos ||
-                              product.tags?.includes('value combo');
+          // Check multiple conditions for value combo products
+          const isValueCombo = product.isValueCombo === true;
+          const hasValueComboSection = product.displaySections?.valueCombos === true;
+          const hasValueComboTag = product.tags && product.tags.some(tag => 
+            tag.toLowerCase().includes('value') || tag.toLowerCase().includes('combo')
+          );
+          const isComboCategory = product.categorySlug === 'combos' || 
+                                product.category?.name?.toLowerCase().includes('combo');
           
-          console.log(`🔍 Value Combos - Product: ${product.name}`, {
-            isValueCombo: product.isValueCombo,
-            displaySections: product.displaySections,
-            tags: product.tags,
-            matches: isValueCombo
-          });
+          const matches = isValueCombo || hasValueComboSection || hasValueComboTag || isComboCategory;
           
-          return isValueCombo;
+          if (matches) {
+            console.log(`✅ Combo match found: ${product.name}`, {
+              isValueCombo,
+              hasValueComboSection,
+              hasValueComboTag,
+              isComboCategory,
+              displaySections: product.displaySections,
+              tags: product.tags,
+              category: product.category
+            });
+          }
+          
+          return matches;
         });
         
-        console.log('✅ Value combo products found:', valueComboProducts);
-        console.log('📈 Value combo count:', valueComboProducts.length);
+        console.log('✅ Value combo products found:', valueComboProducts.length);
+        console.log('📝 Combo products:', valueComboProducts.map(p => p.name));
         
+        // Update state
         setProducts(valueComboProducts);
-      } catch (error) {
-        console.error('Error fetching value combo products:', error);
-        console.error('Error details:', error.message, error.stack);
-        // Don't show error notification, just silently fail with empty products
-        // showError('Failed to load value combo products');
-        setProducts([]);
-      } finally {
         setLoading(false);
+        
+      } catch (error) {
+        console.error('❌ Error fetching value combo products:', error);
+        setProducts([]);
+        setLoading(false);
+        showError('Failed to load combo products: ' + error.message);
       }
     };
 
     fetchValueComboProducts();
-  }, [showError]);
+    
+    // Listen for refresh events
+    const handleRefresh = () => {
+      console.log('🔄 Refreshing Value Combos due to product update');
+      fetchValueComboProducts();
+    };
+    
+    window.addEventListener('refreshHomeSections', handleRefresh);
+    
+    return () => {
+      console.log('🔄 ValueCombos component unmounting - cleaning up');
+      window.removeEventListener('refreshHomeSections', handleRefresh);
+      isMountedRef.current = false;
+    };
+  }, []); // Empty dependency array - only run once on mount
 
-  const handleAddToCart = (e, product) => {
+  const handleBuyNow = (e, product) => {
     e.preventDefault();
     e.stopPropagation();
-
-    // Get the first available size/price from the product
-    const firstSize = product.sizes && product.sizes.length > 0 ? product.sizes[0] : null;
-    const price = firstSize?.price || product.price || 0;
-    const size = firstSize?.size || 'Combo';
-
-    const cartItem = {
-      productId: product._id || product.id,
-      name: product.name,
-      size: size,
-      price: price,
-      quantity: 1,
-      image: getImageUrl(product.images?.[0]?.url || product.image)
-    };
-
-    try {
-      cartAPI.addToCart(cartItem);
-      showSuccess('Combo added to cart!');
-    } catch (error) {
-      console.error('Error adding to cart:', error);
-      showError('Failed to add combo to cart');
-    }
+    
+    // Navigate to product detail page
+    window.location.href = `/product/${product._id || product.id}`;
   };
 
   // Loading state
   if (loading) {
     return (
-      <div className="py-16">
+      <div className="py-16 min-h-96">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading value combos...</p>
+            <p className="text-gray-600">Loading combo products...</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+            >
+              Refresh Page
+            </button>
           </div>
         </div>
       </div>
@@ -106,7 +127,14 @@ const ValueCombos = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">Value Combos</h2>
-            <p className="text-gray-600">No value combo products available at the moment.</p>
+            <p className="text-gray-600 mb-4">No combo products found.</p>
+            <p className="text-sm text-gray-500 mb-4">Check browser console for debug info.</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+            >
+              Reload Page
+            </button>
           </div>
         </div>
       </div>
@@ -163,11 +191,11 @@ const ValueCombos = () => {
                 )}
 
                 {/* Product Image */}
-                <div className="aspect-[4/3] bg-gray-100 flex items-center justify-center relative overflow-hidden">
+                <div className="w-full h-40 sm:h-48 bg-gray-100 flex items-center justify-center relative overflow-hidden">
                   <img
                     src={getImageUrl(product.images?.[0]?.url || product.image)}
                     alt={product.name}
-                    className="w-full h-full object-cover object-center"
+                    className="w-full h-full object-contain p-2"
                     onError={(e) => {
                       e.target.style.display = 'none';
                       e.target.nextSibling.style.display = 'flex';
@@ -179,7 +207,7 @@ const ValueCombos = () => {
                 </div>
 
                 {/* Product Info */}
-                <div className="p-4">
+                <div className="p-3 sm:p-4">
                   {/* Product Title */}
                   <h3 className="text-sm font-medium text-gray-800 mb-3 line-clamp-2 leading-tight">
                     {product.name}
@@ -203,9 +231,9 @@ const ValueCombos = () => {
                         </div>
                       </div>
 
-                      {/* Ratings Count */}
+                      {/* Reviews Count */}
                       <p className="text-xs text-gray-500 mb-3">
-                        {totalRatings > 0 ? `${totalRatings} | Ratings` : ''}
+                        {totalRatings > 0 ? `${totalRatings} | Reviews` : ''}
                       </p>
                     </>
                   )}
@@ -220,18 +248,21 @@ const ValueCombos = () => {
                 </div>
                 </Link>
 
-                {/* Add to Cart Button - Outside Link */}
+                {/* Buy Now Button - Outside Link */}
                 <div className="px-4 pb-4">
                   <button 
-                    onClick={(e) => handleAddToCart(e, product)}
+                    onClick={(e) => handleBuyNow(e, product)}
                     disabled={isSoldOut}
                     className={`w-full py-2 rounded font-semibold text-sm transition-colors ${
                       isSoldOut
                         ? 'bg-gray-400 text-white cursor-not-allowed'
-                        : 'bg-green-700 text-white hover:bg-green-800'
+                        : '!bg-blue-700 text-white hover:!bg-blue-800'
                     }`}
+                    style={!isSoldOut ? {backgroundColor: '#1d4ed8', color: 'white'} : {}}
+                    onMouseEnter={!isSoldOut ? (e) => e.target.style.backgroundColor = '#1e40af' : undefined}
+                    onMouseLeave={!isSoldOut ? (e) => e.target.style.backgroundColor = '#1d4ed8' : undefined}
                   >
-                    {isSoldOut ? 'Sold Out' : 'Add to Cart'}
+                    {isSoldOut ? 'Sold Out' : 'Buy Now'}
                   </button>
                 </div>
               </div>

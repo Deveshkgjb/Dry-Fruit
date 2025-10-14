@@ -2,6 +2,7 @@ import React from 'react';
 import Header from './Homepages/Header.jsx';
 import Navbar from './Homepages/Navbar.jsx';
 import OfferBar from './Homepages/OfferBar.jsx';
+import Hero from './Homepages/Hero.jsx';
 import OurBestSellers from './Homepages/OurBestSellers.jsx';
 import OfferBar2 from './Homepages/OfferBar2.jsx';
 import ValueCombos from './Homepages/ValueCombos.jsx';
@@ -23,9 +24,11 @@ const Home = () => {
       {/* Main Navigation */}
       <Navbar />
       
-      {/* First Offer Banner */}
+      {/* Offer Bar */}
       <OfferBar />
       
+      {/* Hero Section */}
+      <Hero />
       
       {/* Best Sellers Products */}
       <OurBestSellers />

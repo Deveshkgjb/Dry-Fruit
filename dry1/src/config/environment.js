@@ -1,6 +1,9 @@
 // Environment configuration
 // Detect if running on mobile/network access
-const isNetworkAccess = window.location.hostname === '192.168.1.8';
+const isNetworkAccess = window.location.hostname === '192.168.1.8' || 
+                       window.location.hostname.includes('192.168.') ||
+                       window.location.hostname === '0.0.0.0';
+const isProduction = window.location.hostname === 'mufindryfruit.com';
 const baseHost = isNetworkAccess ? '192.168.1.8' : 'localhost';
 
 console.log('🔍 Network Detection:', { isNetworkAccess, baseHost, hostname: window.location.hostname });
@@ -8,14 +11,14 @@ console.log('🔍 Network Detection:', { isNetworkAccess, baseHost, hostname: wi
 let config = {
   // Default fallback configuration
   // If on network access (mobile), always use the network host, ignore env vars
-  API_BASE_URL: isNetworkAccess ? `http://${baseHost}:5001/api` : (import.meta.env.VITE_API_BASE_URL || `http://${baseHost}:5001/api`),
-  BACKEND_URL: isNetworkAccess ? `http://${baseHost}:5001` : (import.meta.env.VITE_BACKEND_URL || `http://${baseHost}:5001`),
+  API_BASE_URL: isNetworkAccess ? `http://${baseHost}:5001/api` : (isProduction ? 'https://mufindryfruit.com/api' : (import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:5001/api' : `http://${baseHost}:5001/api`))),
+  BACKEND_URL: isNetworkAccess ? `http://${baseHost}:5001` : (import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? '' : `http://${baseHost}:5001`)),
   FRONTEND_URL: isNetworkAccess ? `http://${baseHost}:5173` : (import.meta.env.VITE_FRONTEND_URL || `http://${baseHost}:5173`),
   WEBSITE_URL: isNetworkAccess ? `http://${baseHost}:5173` : (import.meta.env.VITE_WEBSITE_URL || `http://${baseHost}:5173`),
   ADMIN_URL: isNetworkAccess ? `http://${baseHost}:5173/admin` : (import.meta.env.VITE_ADMIN_URL || `http://${baseHost}:5173/admin`),
-  API_URL: isNetworkAccess ? `http://${baseHost}:5001/api` : (import.meta.env.VITE_API_URL || `http://${baseHost}:5001/api`),
+  API_URL: isNetworkAccess ? `http://${baseHost}:5001/api` : (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api' : `http://${baseHost}:5001/api`)),
   
-  APP_NAME: import.meta.env.VITE_APP_NAME || 'Happilo',
+  APP_NAME: import.meta.env.VITE_APP_NAME || 'Mufindryfruit',
   APP_VERSION: import.meta.env.VITE_APP_VERSION || '1.0.0',
   NODE_ENV: import.meta.env.VITE_NODE_ENV || 'development',
   IS_DEVELOPMENT: import.meta.env.DEV,
@@ -41,7 +44,12 @@ console.log('🔍 Initial Config Created:', {
 // Function to fetch configuration from backend
 const fetchConfigFromBackend = async () => {
   try {
-    const response = await fetch(`${config.API_BASE_URL}/config`);
+    const configUrl = `${config.API_BASE_URL}/config`;
+    console.log('🔧 Attempting to fetch config from:', configUrl);
+    
+    const response = await fetch(configUrl);
+    console.log('🔧 Config fetch response status:', response.status);
+    
     if (response.ok) {
       const data = await response.json();
       if (data.success && data.config) {
@@ -60,9 +68,12 @@ const fetchConfigFromBackend = async () => {
         console.log('🔧 Configuration loaded from backend:', config);
         return true;
       }
+    } else {
+      console.warn('⚠️ Config fetch failed with status:', response.status);
     }
   } catch (error) {
     console.warn('⚠️ Failed to load configuration from backend, using fallback:', error.message);
+    console.warn('⚠️ Full error:', error);
   }
   return false;
 };

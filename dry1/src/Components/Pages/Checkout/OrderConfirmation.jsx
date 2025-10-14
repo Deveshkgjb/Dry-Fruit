@@ -30,10 +30,10 @@ const OrderConfirmation = () => {
   };
 
   const formatPaymentMethod = (method) => {
-    // Handle case where method is a string (new format)
-    if (typeof method === 'string') {
-      return method.replace('netbanking', 'Net Banking');
-    }
+      // Handle case where method is a string (new format)
+      if (typeof method === 'string') {
+        return method.replace('netbanking', 'Net Banking').replace(/upi/gi, 'Upi');
+      }
     
     // Handle case where method is an object (old format)
     if (method && typeof method === 'object') {
@@ -104,8 +104,8 @@ const OrderConfirmation = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Order Confirmed!</h1>
-          <p className="text-lg text-gray-600">Thank you for your purchase. Your order has been placed successfully.</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Order Is Placed After Payment Verfied</h1>
+          <p className="text-lg text-gray-600">It’s May take up to 30 min to verify your payment thank you for your patience</p>
         </div>
 
         {/* Order Details Card */}
@@ -125,7 +125,7 @@ const OrderConfirmation = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="font-medium">Status:</span>
-                  <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">
+                  <span className="px-2 py-1 bg-green-300 text-black-800 rounded-full text-sm font-medium">
                     {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                   </span>
                 </div>
@@ -148,8 +148,8 @@ const OrderConfirmation = () => {
                   <span className="font-medium">Payment Method:</span>
                   <span className="capitalize">
                     {typeof order.paymentMethod === 'string' 
-                      ? order.paymentMethod.replace('netbanking', 'Net Banking')
-                      : order.paymentMethod?.method?.replace('netbanking', 'Net Banking') || 'Unknown'
+                      ? order.paymentMethod.replace('netbanking', 'Net Banking').replace(/upi/gi, 'Upi')
+                      : order.paymentMethod?.method?.replace('netbanking', 'Net Banking').replace(/upi/gi, 'Upi') || 'Unknown'
                     }
                   </span>
                 </div>
@@ -159,8 +159,8 @@ const OrderConfirmation = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="font-medium">Payment Status:</span>
-                  <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-                    Paid
+                  <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">
+                    Pending
                   </span>
                 </div>
               </div>
@@ -217,14 +217,40 @@ const OrderConfirmation = () => {
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button
-            onClick={() => navigate('/orders')}
-            className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium"
+            onClick={() => navigate(`/track-order?orderNumber=${orderId}`)}
+            className="px-6 py-3 text-white rounded-md transition-colors font-medium"
+            style={{
+              backgroundColor: '#2563eb',
+              color: 'white'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = '#1d4ed8';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = '#2563eb';
+            }}
           >
-            View All Orders
+            Track This Order
           </button>
           <button
-            onClick={() => navigate('/')}
-            className="px-6 py-3 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium"
+            onClick={() => {
+              navigate('/');
+              // Scroll to top when navigating to home page
+              setTimeout(() => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }, 100);
+            }}
+            className="px-6 py-3 text-white rounded-md transition-colors font-medium"
+            style={{
+              backgroundColor: '#2563eb',
+              color: 'white'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = '#1d4ed8';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = '#2563eb';
+            }}
           >
             Continue Shopping
           </button>

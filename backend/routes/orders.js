@@ -134,6 +134,7 @@ router.post('/draft', [
       payment: {
         method: paymentMethod || 'pending',
         status: 'pending',
+        utrNumber: paymentDetails?.utrNumber || null, // Save UTR number if provided
         details: paymentDetails || {}
       },
       pricing: {
@@ -260,7 +261,7 @@ router.post('/', [
     }
 
     // Calculate shipping and tax
-    const shippingCharges = subtotal >= 500 ? 0 : 50; // Free shipping above ₹500
+    const shippingCharges = 0; // No shipping charges
     const tax = Math.round(subtotal * 0.05); // 5% tax
     const total = subtotal + shippingCharges + tax;
 
@@ -271,6 +272,23 @@ router.post('/', [
     }
 
     // Generate order number
+    // Check for duplicate orders (same user, same UTR, within last 5 minutes)
+    if (paymentDetails?.utrNumber) {
+      const recentOrder = await Order.findOne({
+        user: userId,
+        'payment.utrNumber': paymentDetails.utrNumber,
+        createdAt: { $gte: new Date(Date.now() - 5 * 60 * 1000) } // Last 5 minutes
+      });
+      
+      if (recentOrder) {
+        console.log('🚫 Duplicate order detected for UTR:', paymentDetails.utrNumber);
+        return res.status(409).json({ 
+          message: 'Duplicate order detected',
+          order: recentOrder
+        });
+      }
+    }
+
     const orderCount = await Order.countDocuments();
     const orderNumber = `HP${Date.now().toString().slice(-6)}${(orderCount + 1).toString().padStart(4, '0')}`;
 
@@ -287,7 +305,8 @@ router.post('/', [
       billingAddress: billingAddress || { ...shippingAddress, sameAsShipping: true },
       payment: {
         method: paymentMethod,
-        status: paymentMethod === 'cod' ? 'pending' : 'completed'
+        status: paymentMethod === 'cod' ? 'pending' : 'completed',
+        utrNumber: paymentDetails?.utrNumber || null // Save UTR number if provided
       },
       pricing: {
         subtotal,

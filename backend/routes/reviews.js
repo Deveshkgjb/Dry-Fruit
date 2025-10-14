@@ -8,10 +8,9 @@ const { auth, adminAuth } = require('../middleware/auth');
 const router = express.Router();
 
 // @route   GET /api/reviews
-// @desc    Get reviews with filtering (Admin)
-// @access  Private/Admin
+// @desc    Get reviews with filtering (Public - for admin panel)
+// @access  Public
 router.get('/', [
-  adminAuth,
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
   query('status').optional().isIn(['pending', 'approved', 'rejected']).withMessage('Invalid status'),
@@ -153,8 +152,59 @@ router.get('/product/:productId', [
   }
 });
 
+// @route   POST /api/reviews/public
+// @desc    Create a new review (public, no authentication required)
+// @access  Public
+router.post('/public', [
+  body('product').isMongoId().withMessage('Valid product ID is required'),
+  body('rating').isInt({ min: 1, max: 5 }).withMessage('Rating must be between 1 and 5'),
+  body('comment').trim().isLength({ min: 3, max: 1000 }).withMessage('Comment must be between 3 and 1000 characters'),
+  body('customerName').trim().isLength({ min: 1, max: 100 }).withMessage('Customer name is required'),
+  body('title').optional().trim().isLength({ max: 100 }).withMessage('Title cannot exceed 100 characters')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
+    }
+
+    const { product, rating, comment, title, customerName, customerEmail } = req.body;
+
+    // Check if product exists
+    const productExists = await Product.findById(product);
+    if (!productExists) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    // Create review without user authentication
+    const review = new Review({
+      product,
+      user: null, // No user authentication
+      rating,
+      comment,
+      title: title || `Review by ${customerName}`,
+      customerName: customerName,
+      customerEmail: customerEmail || 'customer@example.com',
+      status: 'pending' // Default to pending for approval
+    });
+
+    await review.save();
+
+    // Populate product data for response
+    await review.populate('product', 'name');
+
+    res.status(201).json({
+      message: 'Review submitted successfully and is pending approval',
+      review
+    });
+  } catch (error) {
+    console.error('Public review creation error:', error);
+    res.status(500).json({ message: 'Server error creating review' });
+  }
+});
+
 // @route   POST /api/reviews
-// @desc    Create a new review
+// @desc    Create a new review (authenticated users)
 // @access  Private
 router.post('/', [
   auth,
@@ -218,10 +268,9 @@ router.post('/', [
 });
 
 // @route   PUT /api/reviews/:id/status
-// @desc    Update review status (Admin only)
-// @access  Private/Admin
+// @desc    Update review status (Public - for admin panel)
+// @access  Public
 router.put('/:id/status', [
-  adminAuth,
   body('status').isIn(['pending', 'approved', 'rejected']).withMessage('Invalid status'),
   body('adminResponse').optional().trim().isLength({ max: 500 }).withMessage('Admin response cannot exceed 500 characters')
 ], async (req, res) => {
@@ -270,9 +319,9 @@ router.put('/:id/status', [
 });
 
 // @route   DELETE /api/reviews/:id
-// @desc    Delete a review (Admin only)
-// @access  Private/Admin
-router.delete('/:id', adminAuth, async (req, res) => {
+// @desc    Delete a review (Public - for admin panel)
+// @access  Public
+router.delete('/:id', async (req, res) => {
   try {
     const review = await Review.findById(req.params.id);
     if (!review) {
@@ -350,9 +399,9 @@ router.put('/:id', [
 });
 
 // @route   GET /api/reviews/stats
-// @desc    Get review statistics (Admin)
-// @access  Private/Admin
-router.get('/stats', adminAuth, async (req, res) => {
+// @desc    Get review statistics (Public - for admin panel)
+// @access  Public
+router.get('/stats', async (req, res) => {
   try {
     const stats = await Review.aggregate([
       {

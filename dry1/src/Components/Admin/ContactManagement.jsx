@@ -23,12 +23,20 @@ const ContactManagement = () => {
   const fetchContacts = async () => {
     try {
       setLoading(true);
+      console.log('🔄 Fetching contacts from backend...');
+      
       const response = await contactAPI.getContacts(filters);
-      setContacts(response.contacts);
-      setPagination(response.pagination);
+      console.log('📄 Contacts fetched:', response);
+      
+      setContacts(response.contacts || []);
+      setPagination(response.pagination || {});
     } catch (error) {
-      console.error('Error fetching contacts:', error);
+      console.error('❌ Error fetching contacts:', error);
       showError('Failed to fetch contact messages');
+      
+      // Fallback to empty array if API fails
+      setContacts([]);
+      setPagination({});
     } finally {
       setLoading(false);
     }
@@ -37,10 +45,27 @@ const ContactManagement = () => {
   // Fetch statistics
   const fetchStats = async () => {
     try {
+      console.log('🔄 Fetching contact stats from backend...');
+      
       const response = await contactAPI.getContactStats();
-      setStats(response);
+      console.log('📄 Contact stats fetched:', response);
+      
+      setStats(response || {
+        total: 0,
+        new: 0,
+        read: 0,
+        replied: 0
+      });
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      console.error('❌ Error fetching contact stats:', error);
+      
+      // Fallback to empty stats
+      setStats({
+        total: 0,
+        new: 0,
+        read: 0,
+        replied: 0
+      });
     }
   };
 

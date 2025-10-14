@@ -1,5 +1,6 @@
 import config from '../config/environment.js';
 import { URLs } from '../utils/urls.js';
+import { mobileDebugger } from '../utils/mobileDebugger.js';
 
 // Get API_BASE_URL dynamically to ensure it uses the correct network URL
 const getApiBaseUrl = () => config.API_BASE_URL;
@@ -44,18 +45,23 @@ const apiRequest = async (endpoint, options = {}) => {
     ...options,
   };
 
-  // Add timeout for requests
+  // Add timeout for requests - longer timeout for mobile
+  const timeout = mobileDebugger.isMobile() ? (config.REQUEST_TIMEOUT || 15000) : (config.REQUEST_TIMEOUT || 10000);
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), config.REQUEST_TIMEOUT || 10000);
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
   requestConfig.signal = controller.signal;
 
   try {
     if (config.IS_DEVELOPMENT && config.ENABLE_DEBUG) {
       console.log(`🌐 API Request: ${requestConfig.method || 'GET'} ${url}`);
       console.log(`🔧 API_BASE_URL: ${getApiBaseUrl()}`);
+      console.log(`📱 Is Mobile: ${mobileDebugger.isMobile()}`);
     }
 
-    const response = await fetch(url, requestConfig);
+    // Use mobile-optimized fetch for mobile devices
+    const response = mobileDebugger.isMobile() 
+      ? await mobileDebugger.mobileFetch(url, requestConfig)
+      : await fetch(url, requestConfig);
     clearTimeout(timeoutId);
 
     // Handle different response types
@@ -101,6 +107,17 @@ const apiRequest = async (endpoint, options = {}) => {
         error: error.message,
         stack: error.stack
       });
+    }
+    
+    // For mobile devices, try to retry the request once
+    if (mobileDebugger.isMobile() && !options._retried) {
+      console.log('📱 Mobile retry attempt for:', url);
+      try {
+        return await apiRequest(endpoint, { ...options, _retried: true });
+      } catch (retryError) {
+        console.error('📱 Mobile retry failed:', retryError.message);
+        throw retryError;
+      }
     }
     
     throw error;
@@ -327,16 +344,16 @@ export const reviewsAPI = {
     body: JSON.stringify(statusData),
   }),
 
-  update: (id, reviewData) => adminApiRequest(`/reviews/${id}`, {
+  update: (id, reviewData) => apiRequest(`/reviews/${id}`, {
     method: 'PUT',
     body: JSON.stringify(reviewData),
   }),
 
-  delete: (id) => adminApiRequest(`/reviews/${id}`, {
+  delete: (id) => apiRequest(`/reviews/${id}`, {
     method: 'DELETE',
   }),
 
-  getStats: () => adminApiRequest('/reviews/stats'),
+  getStats: () => apiRequest('/reviews/stats'),
 };
 
 // Orders API
@@ -546,37 +563,45 @@ const categoriesAPI = {
 
 const uploadAPI = {
   uploadImage: (formData, isLogo = false) => {
-    const adminToken = getAdminToken();
-    const headers = {
-      'Authorization': `Bearer ${adminToken}`,
-    };
+    console.log('📁 Upload type:', isLogo ? 'Logo' : 'Product');
+    
+    const headers = {};
     
     // Add header to indicate upload type
     if (isLogo) {
       headers['x-upload-type'] = 'logo';
     }
     
+    console.log('🌐 Upload API - Sending request to:', URLs.UPLOAD.IMAGE);
+    console.log('📋 Upload API - Headers:', headers);
+    
     return fetch(URLs.UPLOAD.IMAGE, {
       method: 'POST',
       headers: headers,
       body: formData
-    }).then(response => response.json());
+    }).then(async response => {
+      console.log('📥 Upload API - Response status:', response.status);
+      const data = await response.json();
+      console.log('📥 Upload API - Response data:', data);
+      
+      if (!response.ok) {
+        throw new Error(data.message || `Upload failed: ${response.status}`);
+      }
+      
+      return data;
+    });
   },
   uploadImages: (formData) => {
-    const adminToken = getAdminToken();
     return fetch(URLs.UPLOAD.IMAGES, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${adminToken}`,
-      },
       body: formData
     }).then(response => response.json());
   },
-  deleteImage: (filename) => adminApiRequest(`/upload/image/${filename}`, { method: 'DELETE' })
+  deleteImage: (filename) => apiRequest(`/upload/image/${filename}`, { method: 'DELETE' })
 };
 
 // Named exports
-export { uploadAPI, categoriesAPI };
+export { uploadAPI, categoriesAPI, paymentSettingsAPI };
 
 // Contact API
 const contactAPI = {
@@ -616,12 +641,27 @@ const contactAPI = {
   }),
 };
 
+// Payment Settings API
+const paymentSettingsAPI = {
+  // Fetch payment settings (admin only)
+  getPaymentSettings: () => adminApiRequest('/payment-settings', {
+    method: 'GET',
+  }),
+
+  // Save payment settings (admin only)
+  savePaymentSettings: (settingsData) => adminApiRequest('/payment-settings', {
+    method: 'POST',
+    body: JSON.stringify(settingsData),
+  }),
+};
+
 export default {
   authAPI,
   productsAPI,
   categoriesAPI,
   reviewsAPI,
   ordersAPI,
+  paymentSettingsAPI,
   adminAPI,
   managerAPI,
   cartAPI,

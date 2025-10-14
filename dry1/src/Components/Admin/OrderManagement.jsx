@@ -12,16 +12,25 @@ const OrderManagement = () => {
 
   const [filterStatus, setFilterStatus] = useState('All');
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [stats, setStats] = useState({
+    total: 0,
+    pending: 0,
+    confirmed: 0,
+    processing: 0,
+    shipped: 0,
+    delivered: 0,
+    cancelled: 0
+  });
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [filterStatus]);
 
   const fetchOrders = async () => {
     setLoading(true);
     setError(null);
     
-    // Show mock data first to demonstrate the UI
+    // Mock data for fallback
     const mockOrders = [
       {
         _id: "68d84491145ca7f056b42e46",
@@ -112,14 +121,22 @@ const OrderManagement = () => {
     ];
     
     try {
+      console.log('🔄 Fetching orders from backend...');
+      
       // Check if admin token exists
       const adminToken = localStorage.getItem('adminToken');
       if (!adminToken) {
         throw new Error('No admin authentication token found. Please log in again.');
       }
 
+      // Build query parameters
+      const params = {};
+      if (filterStatus !== 'All') {
+        params.status = filterStatus.toLowerCase();
+      }
+
       // Try to fetch real orders first
-      const response = await ordersAPI.getAll();
+      const response = await ordersAPI.getAll(params);
       console.log('🔍 Orders API Response:', response);
       
       if (response && response.orders) {
@@ -136,8 +153,21 @@ const OrderManagement = () => {
         setOrders(mockOrders);
         showSuccess('Showing sample orders (Unexpected response format)');
       }
+      
+      // Calculate stats
+      const allOrders = response?.orders || mockOrders;
+      setStats({
+        total: allOrders.length,
+        pending: allOrders.filter(o => o.status === 'pending').length,
+        confirmed: allOrders.filter(o => o.status === 'confirmed').length,
+        processing: allOrders.filter(o => o.status === 'processing').length,
+        shipped: allOrders.filter(o => o.status === 'shipped').length,
+        delivered: allOrders.filter(o => o.status === 'delivered').length,
+        cancelled: allOrders.filter(o => o.status === 'cancelled').length
+      });
+      
     } catch (error) {
-      console.error('Error fetching orders:', error);
+      console.error('❌ Error fetching orders:', error);
       
       // Check if it's an authentication error
       if (error.message.includes('Invalid token') || error.message.includes('No admin authentication token') || error.message.includes('Authentication failed')) {
@@ -154,6 +184,15 @@ const OrderManagement = () => {
       
       // Show mock data as fallback
       setOrders(mockOrders);
+      setStats({
+        total: mockOrders.length,
+        pending: mockOrders.filter(o => o.status === 'pending').length,
+        confirmed: mockOrders.filter(o => o.status === 'confirmed').length,
+        processing: mockOrders.filter(o => o.status === 'processing').length,
+        shipped: mockOrders.filter(o => o.status === 'shipped').length,
+        delivered: mockOrders.filter(o => o.status === 'delivered').length,
+        cancelled: mockOrders.filter(o => o.status === 'cancelled').length
+      });
     } finally {
       setLoading(false);
     }
@@ -389,7 +428,7 @@ const OrderManagement = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-90vh overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold">Order Details - #{selectedOrder.id}</h3>
+              <h3 className="text-xl font-bold">Order Details - #{selectedOrder.orderNumber}</h3>
               <button
                 onClick={() => setSelectedOrder(null)}
                 className="text-gray-500 hover:text-gray-700"
@@ -420,6 +459,14 @@ const OrderManagement = () => {
                   </span>
                 </p>
                 <p><strong>Payment Method:</strong> {selectedOrder.paymentMethod || selectedOrder.payment?.method || 'N/A'}</p>
+                {selectedOrder.payment?.utrNumber && (
+                  <p className="mt-2">
+                    <strong>UTR/Reference Number:</strong> 
+                    <span className="ml-2 px-3 py-1 bg-green-50 text-green-700 rounded font-mono text-sm border border-green-200">
+                      {selectedOrder.payment.utrNumber}
+                    </span>
+                  </p>
+                )}
               </div>
               
               <div>

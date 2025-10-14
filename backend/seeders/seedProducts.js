@@ -107,7 +107,9 @@ const sampleProducts = [
     name: "Mixed Nuts Combo",
     description: "A perfect blend of almonds, cashews, walnuts, and pistachios. Great value for money.",
     category: "Mixes",
+    categorySlug: "mixes",
     subcategory: "Mixed Nuts",
+    slug: "mixed-nuts-combo",
     images: [
       { url: "/src/Components/Homepages/dev1.png", alt: "Mixed Nuts Combo" }
     ],
@@ -131,6 +133,10 @@ const sampleProducts = [
     tags: ["mixed nuts", "combo", "value combo", "nuts"],
     isBestSeller: false,
     isPopular: true,
+    isValueCombo: true,
+    displaySections: {
+      valueCombos: true
+    },
     rating: 4.5,
     reviewCount: 45
   },
@@ -138,7 +144,9 @@ const sampleProducts = [
     name: "Dried Fruits Mix",
     description: "A delightful mix of raisins, apricots, prunes, and figs. Natural sweetness without added sugar.",
     category: "Dried Fruits",
+    categorySlug: "dried-fruits",
     subcategory: "Mixed Dried Fruits",
+    slug: "dried-fruits-mix",
     images: [
       { url: "/src/Components/Homepages/dev1.png", alt: "Dried Fruits Mix" }
     ],
@@ -162,6 +170,10 @@ const sampleProducts = [
     tags: ["dried fruits", "combo", "value combo", "natural"],
     isBestSeller: false,
     isPopular: true,
+    isValueCombo: true,
+    displaySections: {
+      valueCombos: true
+    },
     rating: 4.4,
     reviewCount: 38
   },

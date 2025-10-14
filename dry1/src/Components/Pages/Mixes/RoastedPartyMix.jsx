@@ -80,11 +80,11 @@ const RoastedPartyMix = () => {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
             {products.map((product) => (
               <div key={product._id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
-                <div className="aspect-w-1 aspect-h-1">
+                <div className="w-full h-40 sm:h-44 bg-gray-100 flex items-center justify-center">
                   <img
                     src={product.images?.[0] || '/placeholder-product.jpg'}
                     alt={product.name}
-                    className="w-full h-48 object-cover"
+                    className="w-full h-full object-contain p-2"
                   />
                 </div>
                 <div className="p-4">

@@ -25,8 +25,8 @@ const FAQ = () => {
       answer: "Seeds like chia seeds, flax seeds, pumpkin seeds, and sunflower seeds are excellent for weight loss. They're high in fiber and protein, which help you feel full longer, boost metabolism, and provide essential nutrients while supporting your weight loss goals."
     },
     {
-      question: "What all products can I buy from Happilo?",
-      answer: "Happilo offers a wide range of premium dry fruits, nuts, seeds, trail mixes, nut butters, dried fruits, healthy snacks, gift boxes, and specialty combinations. All products are carefully sourced and processed to maintain the highest quality standards."
+      question: "What all products can I buy from Mufindryfruit?",
+      answer: "Mufindryfruit offers a wide range of premium dry fruits, nuts, seeds, trail mixes, nut butters, dried fruits, healthy snacks, gift boxes, and specialty combinations. All products are carefully sourced and processed to maintain the highest quality standards."
     }
   ];
 

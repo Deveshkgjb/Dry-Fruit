@@ -128,12 +128,14 @@ const ResetPassword = () => {
 
     try {
       const response = await authAPI.verifyOTP(formData.email, formData.otp);
-      showSuccess('OTP verified successfully! Password reset link has been sent to your email.');
+      showSuccess('OTP verified successfully! You can now reset your password.');
       // Store the reset token from the response
       if (response.resetToken) {
         setResetToken(response.resetToken);
+        setStep(3);
+      } else {
+        showError('Reset token not received. Please try again.');
       }
-      setStep(3);
     } catch (error) {
       console.error('Verify OTP error:', error);
       showError(error.message || 'Invalid or expired OTP. Please try again.');
@@ -200,7 +202,7 @@ const ResetPassword = () => {
                   className={`appearance-none relative block w-full px-3 py-2 border ${
                     errors.email ? 'border-red-300' : 'border-gray-300'
                   } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm`}
-                  placeholder="admin@happilo.com"
+                  placeholder="admin@mufindryfruit.com"
                   value={formData.email}
                   onChange={handleInputChange}
                 />

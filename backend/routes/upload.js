@@ -51,15 +51,42 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
+    fileSize: 10 * 1024 * 1024, // 10MB limit (increased from 5MB)
+    files: 10, // Maximum number of files
+    fieldSize: 10 * 1024 * 1024, // 10MB for field values
+    fieldNameSize: 100, // Maximum field name size
+    fields: 20 // Maximum number of fields
   },
   fileFilter: fileFilter
 });
 
 // @route   POST /api/upload/image
 // @desc    Upload product image to Cloudinary
-// @access  Private/Admin
-router.post('/image', adminAuth, upload.single('image'), async (req, res) => {
+// @access  Public (for admin panel)
+router.post('/image', (req, res, next) => {
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      console.error('Upload error:', err);
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ 
+          message: 'File too large. Maximum size allowed is 10MB.',
+          error: 'FILE_TOO_LARGE'
+        });
+      } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+        return res.status(400).json({ 
+          message: 'Unexpected field name. Use "image" as field name.',
+          error: 'UNEXPECTED_FIELD'
+        });
+      } else {
+        return res.status(400).json({ 
+          message: err.message || 'Upload error',
+          error: 'UPLOAD_ERROR'
+        });
+      }
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     console.log('Upload request received:', {
       hasFile: !!req.file,
@@ -95,7 +122,7 @@ router.post('/image', adminAuth, upload.single('image'), async (req, res) => {
 
     // Upload to Cloudinary - determine folder based on request source
     const isLogoUpload = req.headers['x-upload-type'] === 'logo';
-    const folder = isLogoUpload ? 'happilo-logo' : 'happilo-products';
+    const folder = isLogoUpload ? 'mufindryfruit-logo' : 'mufindryfruit-products';
     
     console.log('📁 Upload folder determined:', {
       isLogoUpload,
@@ -150,8 +177,36 @@ router.post('/image', adminAuth, upload.single('image'), async (req, res) => {
 
 // @route   POST /api/upload/images
 // @desc    Upload multiple product images to Cloudinary
-// @access  Private/Admin
-router.post('/images', adminAuth, upload.array('images', 5), async (req, res) => {
+// @access  Public (for admin panel)
+router.post('/images', (req, res, next) => {
+  upload.array('images', 5)(req, res, (err) => {
+    if (err) {
+      console.error('Upload error:', err);
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ 
+          message: 'File too large. Maximum size allowed is 10MB per file.',
+          error: 'FILE_TOO_LARGE'
+        });
+      } else if (err.code === 'LIMIT_FILE_COUNT') {
+        return res.status(413).json({ 
+          message: 'Too many files. Maximum 5 files allowed.',
+          error: 'TOO_MANY_FILES'
+        });
+      } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+        return res.status(400).json({ 
+          message: 'Unexpected field name. Use "images" as field name.',
+          error: 'UNEXPECTED_FIELD'
+        });
+      } else {
+        return res.status(400).json({ 
+          message: err.message || 'Upload error',
+          error: 'UPLOAD_ERROR'
+        });
+      }
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ message: 'No image files provided' });
@@ -161,7 +216,7 @@ router.post('/images', adminAuth, upload.array('images', 5), async (req, res) =>
       try {
         // Upload to Cloudinary
         const result = await cloudinary.uploader.upload(file.path, {
-          folder: 'happilo-products', // Organize product images in a specific folder
+          folder: 'mufindryfruit-products', // Organize product images in a specific folder
           resource_type: 'image',
           transformation: [
             { quality: 'auto' },
@@ -204,8 +259,8 @@ router.post('/images', adminAuth, upload.array('images', 5), async (req, res) =>
 
 // @route   DELETE /api/upload/image/:publicId
 // @desc    Delete uploaded image from Cloudinary
-// @access  Private/Admin
-router.delete('/image/:publicId', adminAuth, async (req, res) => {
+// @access  Public (for admin panel)
+router.delete('/image/:publicId', async (req, res) => {
   try {
     const publicId = req.params.publicId;
     

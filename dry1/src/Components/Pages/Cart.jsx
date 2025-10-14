@@ -10,11 +10,6 @@ const Cart = () => {
   const navigate = useNavigate();
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [shippingInfo, setShippingInfo] = useState({
-    country: '',
-    province: '',
-    zipCode: ''
-  });
   const [orderNote, setOrderNote] = useState('');
   const [deliveryCheck, setDeliveryCheck] = useState('');
   const { showSuccess, showError } = useNotification();
@@ -56,20 +51,6 @@ const Cart = () => {
     return cartItems.reduce((count, item) => count + (parseInt(item.quantity) || 0), 0);
   };
 
-  const handleShippingChange = (field, value) => {
-    setShippingInfo(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleEstimateShipping = () => {
-    if (!shippingInfo.country || !shippingInfo.province || !shippingInfo.zipCode) {
-      showError('Please fill in all shipping fields');
-      return;
-    }
-    showSuccess('Shipping estimated successfully');
-  };
 
   const handleCheckDelivery = () => {
     if (!deliveryCheck) {
@@ -124,35 +105,35 @@ const Cart = () => {
       <Header />
       <Navbar />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
           
           {/* Main Cart Content */}
           <div className="lg:col-span-2">
             {/* Cart Header */}
-            <div className="text-center mb-8">
-              <h1 className="text-4xl font-bold text-gray-800 mb-4">Cart</h1>
-              <div className="w-full h-px bg-green-500 mb-4"></div>
-              <p className="text-green-600 font-medium">You are eligible for free shipping.</p>
+            <div className="text-center mb-6 sm:mb-8">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 mb-3 sm:mb-4">Cart</h1>
+              <div className="w-full h-px bg-green-500 mb-3 sm:mb-4"></div>
+              <p className="text-green-600 font-medium text-sm sm:text-base">You are eligible for free shipping.</p>
             </div>
 
             {/* Cart Table */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
+              <div className="overflow-x-auto -mx-4 sm:mx-0">
+                <table className="w-full min-w-full">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Product</th>
-                      <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">Quantity</th>
-                      <th className="px-6 py-4 text-right text-sm font-semibold text-gray-700">Total</th>
+                      <th className="px-3 sm:px-6 py-4 text-left text-xs sm:text-sm font-semibold text-gray-700">Product</th>
+                      <th className="px-3 sm:px-6 py-4 text-center text-xs sm:text-sm font-semibold text-gray-700">Quantity</th>
+                      <th className="px-3 sm:px-6 py-4 text-right text-xs sm:text-sm font-semibold text-gray-700">Total</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {cartItems.map((item) => (
                       <tr key={item.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center space-x-4">
-                            <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                        <td className="px-3 sm:px-6 py-4">
+                          <div className="flex items-center space-x-2 sm:space-x-4">
+                            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                               <img
                                 src={item.image || '/dev1.png'}
                                 alt={item.name}
@@ -163,7 +144,7 @@ const Cart = () => {
                               />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h3 className="text-sm font-medium text-gray-900 line-clamp-2">
+                              <h3 className="text-xs sm:text-sm font-medium text-gray-900 line-clamp-2">
                                 {item.name}
                               </h3>
                               <p className="text-sm text-gray-500 mt-1">
@@ -213,67 +194,6 @@ const Cart = () => {
               </div>
             </div>
 
-            {/* Estimate Shipping */}
-            <div className="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                  </svg>
-                  Estimate shipping
-                </h3>
-                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Country</label>
-                  <select
-                    value={shippingInfo.country}
-                    onChange={(e) => handleShippingChange('country', e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  >
-                    <option value="">Select Country</option>
-                    <option value="India">India</option>
-                    <option value="USA">USA</option>
-                    <option value="UK">UK</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Province</label>
-                  <select
-                    value={shippingInfo.province}
-                    onChange={(e) => handleShippingChange('province', e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  >
-                    <option value="">Select Province</option>
-                    <option value="Delhi">Delhi</option>
-                    <option value="Mumbai">Mumbai</option>
-                    <option value="Bangalore">Bangalore</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Zip code</label>
-                  <input
-                    type="text"
-                    value={shippingInfo.zipCode}
-                    onChange={(e) => handleShippingChange('zipCode', e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Enter zip code"
-                  />
-                </div>
-                <div className="flex items-end">
-                  <button
-                    onClick={handleEstimateShipping}
-                    className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Estimate
-                  </button>
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Order Summary Sidebar */}

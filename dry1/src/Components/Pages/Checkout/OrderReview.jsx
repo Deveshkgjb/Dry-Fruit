@@ -18,10 +18,28 @@ const OrderReview = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Load cart items from localStorage
-    const savedCart = localStorage.getItem('cart');
-    if (savedCart) {
-      setCartItems(JSON.parse(savedCart));
+    // Load cart items - check for direct order first, then regular cart
+    const directOrder = sessionStorage.getItem('directOrder');
+    if (directOrder) {
+      try {
+        const orderItems = JSON.parse(directOrder);
+        setCartItems(orderItems);
+        console.log('🛒 Loaded direct order items for review:', orderItems);
+      } catch (error) {
+        console.error('Error parsing direct order:', error);
+        // Fallback to regular cart
+        const savedCart = localStorage.getItem('cart');
+        if (savedCart) {
+          setCartItems(JSON.parse(savedCart));
+        }
+      }
+    } else {
+      // Load regular cart items from localStorage
+      const savedCart = localStorage.getItem('cart');
+      if (savedCart) {
+        setCartItems(JSON.parse(savedCart));
+        console.log('🛒 Loaded cart items for review:', JSON.parse(savedCart));
+      }
     }
 
     // Load shipping address
@@ -65,8 +83,7 @@ const OrderReview = () => {
   };
 
   const calculateShipping = () => {
-    const subtotal = calculateSubtotal();
-    return subtotal > 500 ? 0 : 50; // Free shipping above ₹500
+    return 0; // No shipping charges
   };
 
   const calculateTotal = () => {
@@ -266,8 +283,9 @@ const OrderReview = () => {
         existingOrders.push(localOrder);
         localStorage.setItem('orders', JSON.stringify(existingOrders));
 
-        // Clear cart
+        // Clear cart and direct order
         localStorage.removeItem('cart');
+        sessionStorage.removeItem('directOrder');
         localStorage.removeItem('shippingAddress');
         localStorage.removeItem('paymentMethod');
 
@@ -303,85 +321,6 @@ const OrderReview = () => {
     }
   };
 
-  // Test function to create order with minimal valid data
-  const handleTestOrder = async () => {
-    setLoading(true);
-    showSuccess('Creating test order...');
-
-    try {
-      const testOrderData = {
-        items: [{
-          product: "68d8dda535ea6787be8e181c", // Premium California Almonds - valid product ID from your database
-          name: "Premium California Almonds",
-          size: "250g",
-          quantity: 1,
-          price: 299,
-          originalPrice: 399,
-          image: "/src/Components/Homepages/dry.png"
-        }],
-        shippingAddress: {
-          name: "Test User",
-          phone: "9876543210",
-          email: "test@example.com",
-          address: "123 Test Street",
-          city: "Mumbai",
-          state: "Maharashtra",
-          pincode: "400001",
-          country: "India"
-        },
-        paymentMethod: "upi",
-        paymentDetails: {},
-        orderNote: "Test order",
-        subtotal: 299,
-        shipping: 50,
-        total: 364
-      };
-
-      console.log('Creating test order:', testOrderData);
-      console.log('🔍 Test order API call starting...');
-      
-      // Try direct fetch first
-      try {
-        const directResponse = await fetch(`${config.API_BASE_URL}/orders`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(testOrderData)
-        });
-        
-        const directData = await directResponse.json();
-        console.log('🔍 Direct fetch response:', directData);
-        
-        if (directData.success) {
-          showSuccess('Test order placed successfully! (Direct)');
-          console.log('✅ Test order successful, navigating to confirmation page');
-          navigate(`/order-confirmation/${directData.order.orderNumber}`);
-          return;
-        }
-      } catch (directError) {
-        console.log('Direct fetch failed, trying API service:', directError);
-      }
-      
-      // Fallback to API service
-      const response = await ordersAPI.create(testOrderData);
-      console.log('🔍 Test order API response:', response);
-      
-      if (response && response.success) {
-        showSuccess('Test order placed successfully!');
-        console.log('✅ Test order successful, navigating to confirmation page');
-        navigate(`/order-confirmation/${response.order.orderNumber}`);
-      } else {
-        console.log('❌ Test order failed:', response);
-        showError(response?.message || 'Test order failed');
-      }
-    } catch (error) {
-      console.error('Test order error:', error);
-      showError('Test order failed: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const formatPaymentMethod = (method) => {
     if (method.method === 'card') {
@@ -522,15 +461,6 @@ const OrderReview = () => {
                   <span className="text-gray-600">Subtotal</span>
                   <span className="font-medium">₹{calculateSubtotal()}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Shipping</span>
-                  <span className="font-medium">
-                    {calculateShipping() === 0 ? 'Free' : `₹${calculateShipping()}`}
-                  </span>
-                </div>
-                {calculateShipping() === 0 && (
-                  <p className="text-sm text-green-600">🎉 You qualify for free shipping!</p>
-                )}
                 <div className="border-t pt-3">
                   <div className="flex justify-between">
                     <span className="text-lg font-bold text-gray-900">Total</span>
@@ -550,64 +480,6 @@ const OrderReview = () => {
                   }`}
                 >
                   {loading ? 'Placing Order...' : 'Place Order'}
-                </button>
-                
-                {/* Debug Buttons - Remove these in production */}
-                <button
-                  onClick={handleTestOrder}
-                  disabled={loading}
-                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-md font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-                >
-                  {loading ? 'Testing...' : 'Test Order (Debug)'}
-                </button>
-                
-                <button
-                  onClick={() => {
-                    console.log('🔍 Current cart items:', cartItems);
-                    console.log('🔍 Cart items in localStorage:', JSON.parse(localStorage.getItem('cart') || '[]'));
-                    console.log('🔍 Shipping address:', shippingAddress);
-                    console.log('🔍 Payment method:', paymentMethod);
-                  }}
-                  className="w-full bg-gray-600 text-white py-2 px-4 rounded-md font-medium hover:bg-gray-700 transition-colors text-sm"
-                >
-                  Debug Cart (Check Console)
-                </button>
-                
-                <button
-                  onClick={() => {
-                    // Test with current form data
-                    const testData = {
-                      items: cartItems.map(item => ({
-                        product: item.productId,
-                        name: item.name || 'Unknown Product',
-                        size: item.size || '1',
-                        quantity: item.quantity || 1,
-                        price: item.price || 0,
-                        originalPrice: item.originalPrice || item.price || 0,
-                        image: item.image || ''
-                      })),
-                      shippingAddress: {
-                        name: shippingAddress?.name || '',
-                        phone: shippingAddress?.phone || '',
-                        email: shippingAddress?.email || '',
-                        address: shippingAddress?.address || shippingAddress?.street || '',
-                        city: shippingAddress?.city || '',
-                        state: shippingAddress?.state || '',
-                        pincode: shippingAddress?.pincode || '',
-                        country: shippingAddress?.country || 'India'
-                      },
-                      paymentMethod: paymentMethod?.method || 'upi',
-                      paymentDetails: paymentMethod?.data || {},
-                      orderNote: orderNote,
-                      subtotal: calculateSubtotal(),
-                      shipping: calculateShipping(),
-                      total: calculateTotal()
-                    };
-                    console.log('🔍 Test data for current form:', testData);
-                  }}
-                  className="w-full bg-purple-600 text-white py-2 px-4 rounded-md font-medium hover:bg-purple-700 transition-colors text-sm"
-                >
-                  Debug Form Data
                 </button>
                 
                 <button

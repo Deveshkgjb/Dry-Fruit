@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { cartAPI, productsAPI } from '../../services/api.js';
+import { productsAPI } from '../../services/api.js';
 import { useNotification } from '../Common/NotificationProvider.jsx';
 import { getImageUrl } from '../../utils/urls.js';
 import { initializeConfig } from '../../config/environment.js';
@@ -50,39 +50,26 @@ const YouMayAlsoLike = () => {
     };
 
     fetchYouMayLikeProducts();
-  }, [showError]);
+    
+    // Listen for refresh events
+    const handleRefresh = () => {
+      console.log('🔄 Refreshing You May Also Like due to product update');
+      fetchYouMayLikeProducts();
+    };
+    
+    window.addEventListener('refreshHomeSections', handleRefresh);
+    
+    return () => {
+      window.removeEventListener('refreshHomeSections', handleRefresh);
+    };
+  }, []); // Empty dependency array - only run once on mount
 
-  const handleAddToCart = (e, product) => {
+  const handleBuyNow = (e, product) => {
     e.preventDefault();
     e.stopPropagation();
     
-    // Get the first available size/price from the product
-    const firstSize = product.sizes && product.sizes.length > 0 ? product.sizes[0] : null;
-    const price = firstSize?.price || product.price || 0;
-    const size = firstSize?.size || product.weight || 'Standard';
-    const isSoldOut = product.status === 'Inactive' || (firstSize && firstSize.stock <= 0);
-    
-    if (isSoldOut) {
-      showError('This product is currently sold out');
-      return;
-    }
-
-    const cartItem = {
-      productId: product._id || product.id,
-      name: product.name,
-      size: size,
-      price: price,
-      quantity: 1,
-      image: getImageUrl(product.images?.[0]?.url || product.image)
-    };
-
-    try {
-      cartAPI.addToCart(cartItem);
-      showSuccess('Product added to cart!');
-    } catch (error) {
-      console.error('Error adding to cart:', error);
-      showError('Failed to add product to cart');
-    }
+    // Navigate to product detail page
+    window.location.href = `/product/${product._id || product.id}`;
   };
 
   // Loading state
@@ -142,7 +129,7 @@ const YouMayAlsoLike = () => {
               >
                       {/* Product Image */}
                       <div className="relative">
-                        <div className="w-full h-48 bg-gray-100 flex items-center justify-center relative">
+                        <div className="w-full h-40 sm:h-48 bg-gray-100 flex items-center justify-center relative">
                           {/* Badges */}
                           <div className="absolute top-3 left-3 flex flex-col gap-1">
                             <span className="px-2 py-1 text-xs font-semibold rounded text-white bg-purple-500">
@@ -159,13 +146,13 @@ const YouMayAlsoLike = () => {
                           <img 
                             src={getImageUrl(product.images?.[0]?.url || product.image)} 
                             alt={product.name}
-                            className="w-24 h-24 object-contain"
+                            className="w-full h-full object-contain p-2"
                             onError={(e) => {
                               e.target.style.display = 'none';
                               e.target.nextSibling.style.display = 'flex';
                             }}
                           />
-                          <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center" style={{display: 'none'}}>
+                          <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center" style={{display: 'none'}}>
                             <span className="text-gray-400 text-xs">Product</span>
                           </div>
                         </div>
@@ -185,7 +172,7 @@ const YouMayAlsoLike = () => {
                               {renderStars(rating)}
                             </div>
                             <span className="text-xs text-gray-600">
-                              {rating} | {totalRatings} Rating{totalRatings !== 1 ? 's' : ''}
+                              {rating} | {totalRatings} Review{totalRatings !== 1 ? 's' : ''}
                             </span>
                           </div>
                         )}
@@ -209,15 +196,18 @@ const YouMayAlsoLike = () => {
 
                         {/* Action Button */}
                         <button
-                          onClick={(e) => handleAddToCart(e, product)}
+                          onClick={(e) => handleBuyNow(e, product)}
                           disabled={isSoldOut}
                           className={`w-full py-2 px-4 rounded font-medium text-sm transition-colors ${
                             isSoldOut
                               ? 'bg-gray-400 text-white cursor-not-allowed'
-                              : 'bg-green-700 hover:bg-green-800 text-white'
+                              : '!bg-blue-700 hover:!bg-blue-800 text-white'
                           }`}
+                          style={!isSoldOut ? {backgroundColor: '#1d4ed8', color: 'white'} : {}}
+                          onMouseEnter={!isSoldOut ? (e) => e.target.style.backgroundColor = '#1e40af' : undefined}
+                          onMouseLeave={!isSoldOut ? (e) => e.target.style.backgroundColor = '#1d4ed8' : undefined}
                         >
-                          {isSoldOut ? 'Sold Out' : 'Add to Cart'}
+                          {isSoldOut ? 'Sold Out' : 'Buy Now'}
                         </button>
                       </div>
                     </Link>

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { 
   FaSearch, 
   FaTruck, 
@@ -16,12 +17,22 @@ import { useNotification } from '../Common/NotificationProvider.jsx';
 import { ordersAPI } from '../../services/api.js';
 
 const OrderTracking = () => {
+  const [searchParams] = useSearchParams();
   const [mobileNumber, setMobileNumber] = useState('');
   const [orderNumber, setOrderNumber] = useState('');
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const { showSuccess, showError } = useNotification();
+
+  // Pre-fill order number from URL parameter
+  useEffect(() => {
+    const orderNumberParam = searchParams.get('orderNumber');
+    if (orderNumberParam) {
+      setOrderNumber(orderNumberParam);
+      console.log('🎯 Pre-filled order number from URL:', orderNumberParam);
+    }
+  }, [searchParams]);
 
   const handleSearch = async (e) => {
     e.preventDefault();

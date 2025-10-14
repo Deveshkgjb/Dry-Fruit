@@ -334,48 +334,81 @@ router.post('/forgot-password', [
   body('email').isEmail().normalizeEmail().withMessage('Please enter a valid email')
 ], async (req, res) => {
   try {
+    console.log('🔧 STEP 5: Backend - Forgot password route hit');
+    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('❌ STEP 5 ERROR: Backend - Validation failed:', errors.array());
       return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
     }
 
     const { email } = req.body;
+    console.log('📧 STEP 6: Backend - Email received:', email);
 
     // Check if user exists
+    console.log('🔍 STEP 7: Backend - Checking if user exists in database');
     const user = await User.findOne({ email });
     if (!user) {
+      console.log('❌ STEP 7 RESULT: Backend - User not found in database');
       // Don't reveal if email exists or not for security
       return res.json({ 
         message: 'If an account with that email exists, a password reset OTP has been sent.' 
       });
     }
 
+    console.log('✅ STEP 7 RESULT: Backend - User found:', { email: user.email, role: user.role });
+
     // Check if user is admin
     if (user.role !== 'admin') {
+      console.log('❌ STEP 8 ERROR: Backend - User is not admin, role:', user.role);
       return res.status(403).json({ message: 'Password reset is only available for admin accounts.' });
+    }
+
+    console.log('✅ STEP 8: Backend - User is admin, proceeding with OTP generation');
+    
+    // Clear any existing OTP before generating new one
+    if (user.resetPasswordOTP) {
+      console.log('🧹 STEP 8.5: Backend - Clearing previous OTP:', user.resetPasswordOTP);
     }
 
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
+    console.log('🔢 STEP 9: Backend - Generating NEW OTP for user');
+    console.log('🔢 STEP 9: Backend - OTP generated:', otp);
+    console.log('⏰ STEP 9: Backend - OTP expires at:', otpExpiry);
+    console.log('🎲 STEP 9: Backend - This is a FRESH OTP - previous OTP cleared');
+
     // Save OTP to user
+    console.log('💾 STEP 10: Backend - Saving OTP to database');
     user.resetPasswordOTP = otp;
     user.resetPasswordOTPExpiry = otpExpiry;
     await user.save();
+    console.log('✅ STEP 10 RESULT: Backend - OTP saved to database successfully');
 
     // Send OTP via email
+    console.log('📧 STEP 11: Backend - Calling email service to send OTP');
     const emailResult = await sendOTPEmail(email, otp, user.name);
     
+    console.log('📧 STEP 11 RESULT: Backend - Email service result:', emailResult);
+    
     if (emailResult.success) {
-      console.log('✅ OTP sent successfully to:', email);
+      console.log('✅ STEP 12: Backend - Email sent successfully, sending success response');
+      console.log('🎉 EMAIL DELIVERY CONFIRMED! OTP email has been sent to user');
+      console.log('📧 Email delivery time:', emailResult.deliveryTime + 'ms');
+      console.log('📬 User should receive OTP in their inbox shortly');
+      
+      // OTP sent successfully to user email
       res.json({
         message: 'Password reset OTP has been sent to your email address',
         expiresIn: '10 minutes'
       });
     } else {
-      console.error('❌ Failed to send OTP email:', emailResult.error);
+      console.log('❌ STEP 12 ERROR: Backend - Email sending failed:', emailResult.error);
+      // Failed to send OTP email
       // Clear the OTP if email sending failed
+      console.log('🧹 STEP 12 CLEANUP: Backend - Clearing OTP from database due to email failure');
       user.resetPasswordOTP = undefined;
       user.resetPasswordOTPExpiry = undefined;
       await user.save();
@@ -397,56 +430,74 @@ router.post('/forgot-password', [
 // @access  Public
 router.post('/verify-otp', [
   body('email').isEmail().normalizeEmail().withMessage('Please enter a valid email'),
-  body('otp').isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits')
+  body('otp').custom((value) => {
+    const trimmedValue = value.toString().trim();
+    if (!/^\d{6}$/.test(trimmedValue)) {
+      throw new Error('OTP must be exactly 6 digits');
+    }
+    return true;
+  })
 ], async (req, res) => {
   try {
+    console.log('🔍 STEP 16: Backend - OTP verification route hit');
+    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('❌ STEP 16 ERROR: Backend - OTP validation failed:', errors.array());
       return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
     }
 
     const { email, otp } = req.body;
+    const trimmedOtp = otp.toString().trim();
+    
+    console.log('🔍 STEP 17: Backend - Verifying OTP');
+    console.log('📧 STEP 17: Backend - Email:', email);
+    console.log('🔢 STEP 17: Backend - OTP received:', otp);
+    console.log('🔢 STEP 17: Backend - OTP trimmed:', trimmedOtp);
 
     // Find user with valid OTP
+    console.log('🔍 STEP 18: Backend - Searching for user with valid OTP in database');
     const user = await User.findOne({
       email,
-      resetPasswordOTP: otp,
+      resetPasswordOTP: trimmedOtp,
       resetPasswordOTPExpiry: { $gt: new Date() }
     });
 
     if (!user) {
+      console.log('❌ STEP 18 RESULT: Backend - No user found with valid OTP');
+      console.log('❌ STEP 18 RESULT: Backend - OTP might be invalid or expired');
       return res.status(400).json({ 
         message: 'Invalid or expired OTP. Please request a new password reset.' 
       });
     }
+    
+    console.log('✅ STEP 18 RESULT: Backend - User found with valid OTP:', { email: user.email, role: user.role });
 
     // Generate reset token
+    console.log('🔑 STEP 19: Backend - Generating reset token');
     const resetToken = crypto.randomBytes(32).toString('hex');
     const resetTokenExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    
+    console.log('🔑 STEP 19: Backend - Reset token generated');
+    console.log('⏰ STEP 19: Backend - Reset token expires at:', resetTokenExpiry);
 
     // Save reset token to user
+    console.log('💾 STEP 20: Backend - Saving reset token and clearing OTP from database');
     user.resetPasswordToken = resetToken;
     user.resetPasswordTokenExpiry = resetTokenExpiry;
     user.resetPasswordOTP = undefined; // Clear OTP after verification
     user.resetPasswordOTPExpiry = undefined;
     await user.save();
+    
+    console.log('✅ STEP 20 RESULT: Backend - Reset token saved and OTP cleared successfully');
 
-    // Send reset link via email
-    const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
-    const emailResult = await sendPasswordResetLinkEmail(email, resetLink, user.name);
-
-    if (emailResult.success) {
-      console.log('✅ Reset link sent successfully to:', email);
-      res.json({ 
-        message: 'OTP verified successfully. Password reset link has been sent to your email.',
-        resetToken // For testing purposes
-      });
-    } else {
-      console.error('❌ Failed to send reset link email:', emailResult.error);
-      res.status(500).json({ 
-        message: 'Failed to send reset link email. Please try again later.' 
-      });
-    }
+    // Return reset token for frontend to redirect to reset password page
+    console.log('✅ STEP 21: Backend - OTP verified successfully, sending reset token to frontend');
+    res.json({ 
+      message: 'OTP verified successfully. You can now reset your password.',
+      resetToken,
+      redirectUrl: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`
+    });
 
   } catch (error) {
     console.error('Verify OTP error:', error);

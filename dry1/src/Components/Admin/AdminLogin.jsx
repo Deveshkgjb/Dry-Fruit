@@ -90,19 +90,26 @@ const AdminLogin = () => {
       return;
     }
 
+    console.log('🔄 STEP 1: Frontend - Send OTP button clicked');
+    console.log('📧 Email to send OTP:', forgotPasswordEmail);
+    console.log('🎲 STEP 1: Frontend - Requesting NEW OTP generation');
+    
     setForgotPasswordLoading(true);
 
     try {
+      console.log('🌐 STEP 2: Frontend - Making API call to backend');
       const response = await authAPI.forgotPassword(forgotPasswordEmail);
       
+      console.log('✅ STEP 3: Frontend - API response received:', response);
       showSuccess(`${response.message} Please check your email for the 6-digit OTP.`);
       
       // Redirect to reset password page with email
+      console.log('🔄 STEP 4: Frontend - Redirecting to reset password page');
       navigate('/admin/reset-password', { 
         state: { email: forgotPasswordEmail, step: 2 } 
       });
     } catch (error) {
-      console.error('Forgot password error:', error);
+      console.error('❌ STEP ERROR: Frontend - Forgot password error:', error);
       showError(error.message || 'Failed to send OTP. Please try again.');
     } finally {
       setForgotPasswordLoading(false);
@@ -217,17 +224,6 @@ const AdminLogin = () => {
           </div>
         </form>
 
-        {/* Demo Credentials */}
-        <div className="mt-8 p-4 bg-blue-50 rounded-lg">
-          <h3 className="text-sm font-medium text-blue-900 mb-2">Demo Admin Credentials:</h3>
-          <div className="text-xs text-blue-800 space-y-1">
-            <p><strong>Email:</strong> admin@happilo.com</p>
-            <p><strong>Password:</strong> admin123</p>
-          </div>
-          <div className="mt-2 text-xs text-blue-600">
-            <p>Additional admins: superadmin@happilo.com, manager@happilo.com</p>
-          </div>
-        </div>
       </div>
 
       {/* Forgot Password Modal */}
@@ -263,7 +259,7 @@ const AdminLogin = () => {
                       value={forgotPasswordEmail}
                       onChange={(e) => setForgotPasswordEmail(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
-                      placeholder="admin@happilo.com"
+                      placeholder="admin@mufindryfruit.com"
                       required
                     />
                   </div>
@@ -291,15 +287,6 @@ const AdminLogin = () => {
                 </form>
               </div>
               
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <h4 className="text-sm font-medium text-blue-900 mb-2">Demo Instructions:</h4>
-                <div className="text-xs text-blue-800 space-y-1">
-                  <p>• Use: <strong>admin@happilo.com</strong></p>
-                  <p>• Check your email for the 6-digit OTP</p>
-                  <p>• OTP expires in 10 minutes</p>
-                  <p>• Use the OTP to reset your password</p>
-                </div>
-              </div>
             </div>
           </div>
         </div>

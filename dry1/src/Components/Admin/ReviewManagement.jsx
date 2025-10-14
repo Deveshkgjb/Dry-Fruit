@@ -1,71 +1,138 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { reviewsAPI } from '../../services/api.js';
+import { useNotification } from '../Common/NotificationProvider.jsx';
 
 const ReviewManagement = () => {
-  const [reviews, setReviews] = useState([
-    {
-      id: 1,
-      productName: "Happilo Roasted & Lightly Salted Premium California Almonds",
-      customerName: "Rahul Sharma",
-      rating: 5,
-      comment: "Excellent quality almonds! Fresh, crunchy, and perfectly salted. Will definitely order again.",
-      date: "2024-01-15",
-      status: "Approved",
-      productId: 1
-    },
-    {
-      id: 2,
-      productName: "Happilo Premium Whole Cashew Nuts",
-      customerName: "Priya Patel",
-      rating: 4,
-      comment: "Good taste and quality. Packaging is also nice. Slightly expensive but worth it.",
-      date: "2024-01-10",
-      status: "Approved",
-      productId: 2
-    },
-    {
-      id: 3,
-      productName: "Happilo Premium Dried Blueberry",
-      customerName: "Amit Kumar",
-      rating: 2,
-      comment: "Poor quality product. Very disappointed with the purchase.",
-      date: "2024-01-08",
-      status: "Pending",
-      productId: 3
-    },
-    {
-      id: 4,
-      productName: "Happilo Roasted & Lightly Salted Premium California Almonds",
-      customerName: "Sneha Reddy",
-      rating: 1,
-      comment: "Worst product ever. Don't buy this.",
-      date: "2023-12-28",
-      status: "Rejected",
-      productId: 1
+  const { showSuccess, showError } = useNotification();
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    total: 0,
+    approved: 0,
+    pending: 0,
+    rejected: 0
+  });
+
+  // Fetch reviews from backend
+  const fetchReviews = async () => {
+    try {
+      setLoading(true);
+      console.log('🔄 Fetching reviews from backend...');
+      
+      const response = await reviewsAPI.getAll({
+        page: 1,
+        limit: 100,
+        sort: 'createdAt',
+        order: 'desc'
+      });
+      
+      console.log('📄 Reviews fetched:', response);
+      setReviews(response.reviews || []);
+      
+      // Calculate stats
+      const total = response.reviews?.length || 0;
+      const approved = response.reviews?.filter(r => r.status === 'approved').length || 0;
+      const pending = response.reviews?.filter(r => r.status === 'pending').length || 0;
+      const rejected = response.reviews?.filter(r => r.status === 'rejected').length || 0;
+      
+      setStats({ total, approved, pending, rejected });
+      
+    } catch (error) {
+      console.error('❌ Error fetching reviews:', error);
+      showError('Failed to fetch reviews from database. Please check your connection and admin token.');
+      
+      // No fallback to mock data - keep empty state to force database connection
+      setReviews([]);
+      setStats({ total: 0, approved: 0, pending: 0, rejected: 0 });
     }
-  ]);
+  };
 
   const [filterStatus, setFilterStatus] = useState('All');
   const [filterRating, setFilterRating] = useState('All');
 
-  const handleStatusChange = (reviewId, newStatus) => {
-    setReviews(reviews.map(review => 
-      review.id === reviewId 
-        ? { ...review, status: newStatus }
-        : review
-    ));
-  };
+  // Load reviews on component mount
+  useEffect(() => {
+    fetchReviews();
+  }, []);
 
-  const handleDeleteReview = (reviewId) => {
-    if (window.confirm('Are you sure you want to delete this review?')) {
-      setReviews(reviews.filter(review => review.id !== reviewId));
+  const handleStatusChange = async (reviewId, newStatus) => {
+    try {
+      console.log(`🔄 Updating review ${reviewId} status to ${newStatus}...`);
+      
+      // Use API for database reviews only
+      const response = await reviewsAPI.updateStatus(reviewId, { status: newStatus.toLowerCase() });
+      console.log('✅ Review status updated:', response);
+      
+      showSuccess(`Review ${newStatus} successfully`);
+      
+      // Update local state
+      setReviews(prevReviews => 
+        prevReviews.map(review => 
+          review._id === reviewId 
+            ? { ...review, status: newStatus.toLowerCase() }
+            : review
+        )
+      );
+      
+      // Update stats
+      setStats(prevStats => {
+        const newStats = { ...prevStats };
+        const review = reviews.find(r => r._id === reviewId);
+        if (review) {
+          // Remove from old status count
+          if (review.status === 'approved') newStats.approved--;
+          else if (review.status === 'pending') newStats.pending--;
+          else if (review.status === 'rejected') newStats.rejected--;
+          
+          // Add to new status count
+          if (newStatus.toLowerCase() === 'approved') newStats.approved++;
+          else if (newStatus.toLowerCase() === 'pending') newStats.pending++;
+          else if (newStatus.toLowerCase() === 'rejected') newStats.rejected++;
+        }
+        return newStats;
+      });
+      
+    } catch (error) {
+      console.error('❌ Error updating review status:', error);
+      showError('Failed to update review status');
     }
   };
 
+  const handleDeleteReview = async (reviewId) => {
+    if (!window.confirm('Are you sure you want to delete this review?')) {
+      return;
+    }
+    
+    try {
+      console.log(`🗑️ Deleting review ${reviewId}...`);
+      
+      // Use API for database reviews only
+      await reviewsAPI.delete(reviewId);
+      console.log('✅ Review deleted successfully');
+      
+      showSuccess('Review deleted successfully');
+      
+      // Update local state
+      setReviews(prevReviews => prevReviews.filter(review => review._id !== reviewId));
+      
+      // Update stats
+      setStats(prevStats => ({
+        ...prevStats,
+        total: prevStats.total - 1
+      }));
+      
+    } catch (error) {
+      console.error('❌ Error deleting review:', error);
+      showError('Failed to delete review');
+    }
+  };
+
+
   const getStatusColor = (status) => {
-    switch (status) {
-      case 'Approved': return 'bg-green-100 text-green-800';
-      case 'Pending': return 'bg-yellow-100 text-yellow-800';
-      case 'Rejected': return 'bg-red-100 text-red-800';
+    switch (status?.toLowerCase()) {
+      case 'approved': return 'bg-green-100 text-green-800';
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'rejected': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -82,23 +149,46 @@ const ReviewManagement = () => {
   };
 
   const filteredReviews = reviews.filter(review => {
-    const statusMatch = filterStatus === 'All' || review.status === filterStatus;
+    // Handle both API data (lowercase status) and mock data (capitalized status)
+    const reviewStatus = review.status;
+    const normalizedStatus = reviewStatus.charAt(0).toUpperCase() + reviewStatus.slice(1).toLowerCase();
+    
+    const statusMatch = filterStatus === 'All' || 
+                       reviewStatus === filterStatus || 
+                       normalizedStatus === filterStatus;
     const ratingMatch = filterRating === 'All' || review.rating.toString() === filterRating;
     return statusMatch && ratingMatch;
   });
 
   const reviewStats = {
     total: reviews.length,
-    approved: reviews.filter(r => r.status === 'Approved').length,
-    pending: reviews.filter(r => r.status === 'Pending').length,
-    rejected: reviews.filter(r => r.status === 'Rejected').length,
+    approved: reviews.filter(r => r.status === 'Approved' || r.status === 'approved').length,
+    pending: reviews.filter(r => r.status === 'Pending' || r.status === 'pending').length,
+    rejected: reviews.filter(r => r.status === 'Rejected' || r.status === 'rejected').length,
     avgRating: reviews.length > 0 ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) : 0
   };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+          <p className="ml-4 text-gray-600">Loading reviews...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Review Management</h2>
+        <button
+          onClick={fetchReviews}
+          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+        >
+          Refresh Reviews
+        </button>
       </div>
 
       {/* Stats Cards */}
@@ -147,7 +237,7 @@ const ReviewManagement = () => {
             onChange={(e) => setFilterRating(e.target.value)}
             className="p-2 border border-gray-300 rounded-lg"
           >
-            <option value="All">All Ratings</option>
+            <option value="All">All Reviews</option>
             <option value="5">5 Stars</option>
             <option value="4">4 Stars</option>
             <option value="3">3 Stars</option>

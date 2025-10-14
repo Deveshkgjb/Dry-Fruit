@@ -8,6 +8,10 @@
     "dev-mock": "nodemon dev-server.js",
     "seed": "node seeders/seedDatabase.js",
     "seed-products": "node seeders/seedProducts.js",
+    "create-admin": "node create-admin.js",
+    "create-admin-quick": "node create-admin-quick.js",
+    "test-upload": "node test-upload.js",
+    "seed-random-products": "node seed-random-products.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -18,13 +22,15 @@
     "bcryptjs": "^3.0.2",
     "cloudinary": "^1.41.3",
     "cors": "^2.8.5",
-    "dotenv": "^17.2.2",
+    "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "express-validator": "^7.2.1",
+    "form-data": "^4.0.4",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.18.2",
     "multer": "^2.0.2",
     "multer-storage-cloudinary": "^4.0.0",
+    "node-fetch": "^3.3.2",
     "nodemailer": "^7.0.6"
   },
   "devDependencies": {

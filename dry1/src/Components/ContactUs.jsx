@@ -125,8 +125,8 @@ const ContactUs = () => {
                   </div>
                   <div className="ml-4">
                     <h3 className="text-lg font-medium text-gray-900">Email</h3>
-                    <p className="text-gray-600">admin@happilo.com</p>
-                    <p className="text-gray-600">support@happilo.com</p>
+                    <p className="text-gray-600">admin@mufindryfruit.com</p>
+                    <p className="text-gray-600">support@mufindryfruit.com</p>
                   </div>
                 </div>
 
@@ -164,7 +164,7 @@ const ContactUs = () => {
             </div>
 
             <div className="bg-green-50 p-6 rounded-lg">
-              <h3 className="text-lg font-medium text-green-900 mb-2">Why Choose Happilo?</h3>
+              <h3 className="text-lg font-medium text-green-900 mb-2">Why Choose Mufindryfruit?</h3>
               <ul className="space-y-2 text-green-800">
                 <li className="flex items-center">
                   <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">

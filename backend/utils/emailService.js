@@ -7,7 +7,30 @@ const createTransport = () => {
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS
-    }
+    },
+    // Ultra-fast delivery optimization
+    pool: true,
+    maxConnections: 15,
+    maxMessages: 300,
+    rateLimit: 50, // 50 emails per second
+    // Ultra-fast connection timeouts
+    connectionTimeout: 15000, // 15 seconds
+    greetingTimeout: 8000,    // 8 seconds
+    socketTimeout: 15000,     // 15 seconds
+    // Immediate retry for critical emails
+    retry: {
+      times: 1,
+      interval: 1000 // 1 second retry
+    },
+    // Enable keep-alive for faster connections
+    keepAlive: true,
+    keepAliveMsecs: 30000,
+    // Gmail-specific optimizations
+    tls: {
+      rejectUnauthorized: false
+    },
+    debug: false,
+    logger: false
   };
 
   // If custom SMTP settings are provided, use them instead of service
@@ -37,27 +60,40 @@ const createTransport = () => {
 // Send OTP email
 const sendOTPEmail = async (email, otp, userName = 'Admin') => {
   try {
+    console.log('📧 STEP 13: Email Service - Starting OTP email send');
+    console.log('📧 STEP 13: Email Service - Target email:', email);
+    console.log('📧 STEP 13: Email Service - User name:', userName);
+    
     // Temporary mock for testing - remove this when email is working
     if (process.env.NODE_ENV === 'development' && process.env.USE_MOCK_EMAIL === 'true') {
-      console.log('📧 MOCK EMAIL - OTP Email would be sent to:', email);
-      console.log('📧 MOCK EMAIL - OTP:', otp);
-      console.log('📧 MOCK EMAIL - User:', userName);
+      console.log('📧 STEP 13: Email Service - Using MOCK email mode');
+      // Mock email - OTP would be sent to user
+      // Mock email sent
       return { success: true, messageId: 'mock-otp-email' };
     }
+
+    console.log('📧 STEP 13: Email Service - Using REAL email mode');
     
     const transporter = createTransport();
     
     const mailOptions = {
       from: {
-        name: process.env.EMAIL_FROM_NAME || 'Happilo Support',
-        address: process.env.EMAIL_FROM_ADDRESS || process.env.EMAIL_USER || 'noreply@happilo.com'
+        name: process.env.EMAIL_FROM_NAME || 'Mufindryfruit Support',
+        address: process.env.EMAIL_FROM_ADDRESS || process.env.EMAIL_USER || 'noreply@mufindryfruit.com'
       },
       to: email,
-      subject: 'Password Reset OTP - Happilo Admin',
+      subject: '🚨 URGENT: Password Reset OTP - Mufindryfruit Admin',
+      priority: 'high',
+      headers: {
+        'X-Priority': '1',
+        'X-MSMail-Priority': 'High',
+        'Importance': 'high',
+        'X-Mailer': 'Mufindryfruit Admin System'
+      },
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">Happilo</h1>
+            <h1 style="color: white; margin: 0; font-size: 28px;">Mufindryfruit</h1>
             <p style="color: white; margin: 10px 0 0 0; font-size: 16px;">Dry Fruits & Nuts</p>
           </div>
           
@@ -91,7 +127,7 @@ const sendOTPEmail = async (email, otp, userName = 'Admin') => {
             
             <div style="text-align: center;">
               <p style="color: #6b7280; font-size: 12px; margin: 0;">
-                © 2024 Happilo. All rights reserved.<br>
+                © 2024 Mufindryfruit. All rights reserved.<br>
                 This is an automated message, please do not reply to this email.
               </p>
             </div>
@@ -100,12 +136,46 @@ const sendOTPEmail = async (email, otp, userName = 'Admin') => {
       `
     };
 
-    const result = await transporter.sendMail(mailOptions);
-    console.log('✅ OTP Email sent successfully:', result.messageId);
-    return { success: true, messageId: result.messageId };
+    // Ultra-fast delivery with immediate retry
+    console.log('📧 STEP 14: Email Service - Attempting to send email via SMTP');
+    let lastError;
+    const startTime = Date.now();
+    
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        console.log(`📧 STEP 14: Email Service - Attempt ${attempt} of 2`);
+        const result = await transporter.sendMail(mailOptions);
+        const deliveryTime = Date.now() - startTime;
+        
+        console.log('✅ STEP 15: Email Service - Email sent successfully!');
+        console.log('📧 STEP 15: Email Service - Message ID:', result.messageId);
+        console.log('⏱️ STEP 15: Email Service - Delivery time:', deliveryTime + 'ms');
+        console.log('🎉 EMAIL SENT SUCCESSFULLY! OTP delivered to user inbox');
+        console.log('📬 User should check their email now');
+        
+        return { success: true, messageId: result.messageId, deliveryTime };
+      } catch (error) {
+        lastError = error;
+        const attemptTime = Date.now() - startTime;
+        
+        console.log(`❌ STEP 14 ERROR: Email Service - Attempt ${attempt} failed in ${attemptTime}ms`);
+        console.log('❌ STEP 14 ERROR: Email Service - Error:', error.message);
+        
+        if (attempt < 2) {
+          console.log('🔄 STEP 14: Email Service - Retrying in 500ms...');
+          // Immediate retry...
+          await new Promise(resolve => setTimeout(resolve, 500)); // 500ms retry
+        }
+      }
+    }
+    
+    console.log('❌ STEP 15 ERROR: Email Service - All attempts failed');
+    console.log('❌ STEP 15 ERROR: Email Service - Final error:', lastError.message);
+    // All email attempts failed
+    return { success: false, error: lastError.message };
     
   } catch (error) {
-    console.error('❌ Error sending OTP email:', error);
+    console.error('❌ Error in sendOTPEmail:', error);
     return { success: false, error: error.message };
   }
 };
@@ -124,15 +194,15 @@ const sendPasswordResetSuccessEmail = async (email, userName = 'Admin') => {
     
     const mailOptions = {
       from: {
-        name: process.env.EMAIL_FROM_NAME || 'Happilo Support',
-        address: process.env.EMAIL_FROM_ADDRESS || process.env.EMAIL_USER || 'noreply@happilo.com'
+        name: process.env.EMAIL_FROM_NAME || 'Mufindryfruit Support',
+        address: process.env.EMAIL_FROM_ADDRESS || process.env.EMAIL_USER || 'noreply@mufindryfruit.com'
       },
       to: email,
-      subject: 'Password Reset Successful - Happilo Admin',
+      subject: 'Password Reset Successful - Mufindryfruit Admin',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">Happilo</h1>
+            <h1 style="color: white; margin: 0; font-size: 28px;">Mufindryfruit</h1>
             <p style="color: white; margin: 10px 0 0 0; font-size: 16px;">Dry Fruits & Nuts</p>
           </div>
           
@@ -169,7 +239,7 @@ const sendPasswordResetSuccessEmail = async (email, userName = 'Admin') => {
             
             <div style="text-align: center;">
               <p style="color: #6b7280; font-size: 12px; margin: 0;">
-                © 2024 Happilo. All rights reserved.<br>
+                © 2024 Mufindryfruit. All rights reserved.<br>
                 This is an automated message, please do not reply to this email.
               </p>
             </div>
@@ -203,15 +273,15 @@ const sendPasswordResetLinkEmail = async (email, resetLink, userName = 'User') =
     
     const mailOptions = {
       from: {
-        name: 'Happilo Support',
-        address: process.env.EMAIL_USER || 'noreply@happilo.com'
+        name: 'Mufindryfruit Support',
+        address: process.env.EMAIL_USER || 'noreply@mufindryfruit.com'
       },
       to: email,
-      subject: 'Password Reset Link - Happilo',
+      subject: 'Password Reset Link - Mufindryfruit',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">Happilo</h1>
+            <h1 style="color: white; margin: 0; font-size: 28px;">Mufindryfruit</h1>
             <p style="color: white; margin: 10px 0 0 0; font-size: 16px;">Dry Fruits & Nuts</p>
           </div>
           
@@ -247,7 +317,7 @@ const sendPasswordResetLinkEmail = async (email, resetLink, userName = 'User') =
             
             <div style="text-align: center;">
               <p style="color: #6b7280; font-size: 12px; margin: 0;">
-                © 2024 Happilo. All rights reserved.<br>
+                © 2024 Mufindryfruit. All rights reserved.<br>
                 This is an automated message, please do not reply to this email.
               </p>
             </div>

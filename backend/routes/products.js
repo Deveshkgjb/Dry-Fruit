@@ -47,6 +47,16 @@ router.get('/', [
     if (isBestSeller === 'true') filter.isBestSeller = true;
     if (isPopular === 'true') filter.isPopular = true;
 
+    // For frontend API calls, only show active products
+    // Admin API calls (with auth token) can see all products
+    const isAdminRequest = req.headers.authorization && req.headers.authorization.startsWith('Bearer');
+    if (!isAdminRequest) {
+      filter.status = 'Active';
+      console.log('🌐 Frontend API call - filtering for active products only');
+    } else {
+      console.log('🔐 Admin API call - showing all products (including inactive)');
+    }
+
     // Price filtering
     if (minPrice || maxPrice) {
       filter['sizes.price'] = {};
@@ -148,7 +158,8 @@ router.get('/category/:categorySlug', async (req, res) => {
     // Build filter
     const filter = { 
       categorySlug: categorySlug, 
-      isActive: true 
+      isActive: true,
+      status: 'Active'  // Only show active products on frontend
     };
 
     // Build sort object
@@ -213,14 +224,14 @@ router.get('/featured', async (req, res) => {
           { 'displaySections.valueCombos': true },
           { 'displaySections.youMayAlsoLike': true }
         ]
-      }).populate('category', 'name slug').limit(20).lean(),
+      }).populate('category', 'name slug').limit(1000).lean(),
       Product.find({ 
         isActive: true, 
         $or: [
           { isPopular: true },
           { 'displaySections.popular': true }
         ]
-      }).populate('category', 'name slug').limit(8).lean(),
+      }).populate('category', 'name slug').limit(1000).lean(),
       Product.find({ isActive: true }).populate('category', 'name slug').sort({ createdAt: -1 }).limit(8).lean()
     ]);
 
@@ -284,8 +295,8 @@ router.get('/:id', optionalAuth, async (req, res) => {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    // Get reviews for this product
-    const reviews = await Review.find({ 
+    // Get user-submitted reviews for this product
+    const userReviews = await Review.find({ 
       product: req.params.id, 
       status: 'approved' 
     })
@@ -293,6 +304,41 @@ router.get('/:id', optionalAuth, async (req, res) => {
     .sort({ createdAt: -1 })
     .limit(10)
     .lean();
+
+    // Combine admin-added reviews (from product.reviews) with user-submitted reviews
+    let allReviews = [];
+    
+    // Add admin-added reviews first (these are embedded in the product document)
+    if (product.reviews && product.reviews.length > 0) {
+      console.log(`📝 Found ${product.reviews.length} admin-added reviews in product document`);
+      const adminReviews = product.reviews.map(review => ({
+        _id: review.id || `admin_${Date.now()}_${Math.random()}`,
+        customerName: review.customerName,
+        rating: review.rating,
+        title: review.title,
+        comment: review.comment,
+        date: review.date,
+        verified: review.verified || true,
+        helpful: review.helpful || 0,
+        isAdminAdded: true
+      }));
+      allReviews = [...adminReviews];
+      console.log(`✅ Added ${adminReviews.length} admin reviews to response`);
+    }
+
+    // Add user-submitted reviews
+    if (userReviews && userReviews.length > 0) {
+      console.log(`📝 Found ${userReviews.length} user-submitted reviews`);
+      const formattedUserReviews = userReviews.map(review => ({
+        ...review,
+        customerName: review.user?.name || 'Anonymous',
+        isAdminAdded: false
+      }));
+      allReviews = [...allReviews, ...formattedUserReviews];
+      console.log(`✅ Added ${formattedUserReviews.length} user reviews to response`);
+    }
+
+    console.log(`📊 Total reviews being returned: ${allReviews.length}`);
 
     // Get related products (same category, excluding current product)
     const relatedProducts = await Product.find({
@@ -314,7 +360,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
 
     res.json({
       product,
-      reviews,
+      reviews: allReviews,
       relatedProducts,
       isInWishlist
     });
@@ -346,7 +392,29 @@ router.post('/', [
       return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
     }
 
-    const { name, description, category, sizes, ...otherData } = req.body;
+    const { name, description, category, sizes, reviews, ...otherData } = req.body;
+
+    // Debug: Log what backend receives
+    console.log('📥 Backend received product data:', {
+      name,
+      reviewsCount: reviews ? reviews.length : 0,
+      reviews: reviews,
+      quickRating: req.body.quickRating,
+      quickReviewCount: req.body.quickReviewCount
+    });
+    
+    // Additional debug for reviews
+    if (reviews && reviews.length > 0) {
+      console.log('🔍 Detailed review data received:');
+      reviews.forEach((review, index) => {
+        console.log(`  Review ${index + 1}:`, {
+          customerName: review.customerName,
+          rating: review.rating,
+          comment: review.comment ? review.comment.substring(0, 50) + '...' : 'No comment',
+          date: review.date
+        });
+      });
+    }
 
     // Find the category by name
     const categoryDoc = await Category.findOne({ name: category });
@@ -369,6 +437,28 @@ router.post('/', [
       counter++;
     }
 
+    // Handle popularity settings
+    const { popularitySettings } = req.body;
+    let processedPopularitySettings = {
+      orderCount: 0,
+      offerCountdown: {
+        enabled: true,
+        duration: 15,
+        startTime: new Date()
+      }
+    };
+
+    if (popularitySettings) {
+      processedPopularitySettings = {
+        orderCount: popularitySettings.orderCount || 0,
+        offerCountdown: {
+          enabled: popularitySettings.offerCountdown?.enabled !== false,
+          duration: popularitySettings.offerCountdown?.duration || 15,
+          startTime: new Date() // Always reset timer when product is created/updated
+        },
+      };
+    }
+
     const productData = {
       name,
       description,
@@ -376,6 +466,7 @@ router.post('/', [
       categorySlug: categoryDoc.slug, // Use category slug
       slug: finalSlug, // Generated slug
       sizes,
+      popularitySettings: processedPopularitySettings,
       ...otherData
     };
 
@@ -383,11 +474,96 @@ router.post('/', [
       categoryName: categoryDoc.name,
       categorySlug: categoryDoc.slug,
       productName: name,
-      productSlug: finalSlug
+      productSlug: finalSlug,
+      reviewsCount: reviews ? reviews.length : 0
     });
 
     const product = new Product(productData);
     await product.save();
+
+    // Auto-set isBestSeller if product is added to Value Combo or You May Like
+    const { isValueCombo, isYouMayLike, displaySections } = req.body;
+    if (isValueCombo || isYouMayLike || displaySections?.valueCombos || displaySections?.youMayAlsoLike) {
+      console.log('🎯 Product added to Value Combo or You May Like - auto-setting as Best Seller');
+      product.isBestSeller = true;
+      if (!product.displaySections) product.displaySections = {};
+      product.displaySections.ourBestSellers = true;
+      await product.save();
+      console.log('✅ Product automatically added to Our Best Sellers');
+    }
+
+    // Process quick rating settings and detailed reviews
+    const { quickRating, quickReviewCount } = req.body;
+    
+    // Initialize rating object
+    let finalRating = product.rating || { average: 0, count: 0 };
+    
+    // Process detailed reviews if provided (priority over quick rating)
+    if (reviews && reviews.length > 0) {
+      console.log(`📝 Processing ${reviews.length} reviews for product: ${product.name}`);
+      console.log(`📝 Raw reviews received:`, JSON.stringify(reviews, null, 2));
+      
+      // Filter valid reviews (more lenient - only require customer name and rating)
+      const validReviews = reviews.filter(review => 
+        review.customerName && review.customerName.trim() !== '' && 
+        review.rating && review.rating > 0
+      );
+      
+      console.log(`📝 Valid reviews after filtering: ${validReviews.length} out of ${reviews.length}`);
+      console.log(`📝 Valid reviews:`, JSON.stringify(validReviews, null, 2));
+      
+      if (validReviews.length > 0) {
+        const totalRating = validReviews.reduce((sum, review) => sum + parseInt(review.rating), 0);
+        const averageRating = totalRating / validReviews.length;
+        
+        // Save reviews to product document AND set rating
+        product.reviews = validReviews.map(review => ({
+          id: review.id || `review_${Date.now()}_${Math.random()}`,
+          customerName: review.customerName,
+          customerEmail: review.customerEmail || '',
+          rating: parseInt(review.rating),
+          title: review.title || '',
+          comment: review.comment || 'Great product!', // Default comment if empty
+          date: review.date || new Date().toISOString().split('T')[0],
+          verified: review.verified || true,
+          helpful: review.helpful || 0
+        }));
+        
+        // Update product rating from detailed reviews
+        finalRating = {
+          average: Math.round(averageRating * 10) / 10,
+          count: validReviews.length
+        };
+        
+        console.log(`📊 Set product rating from admin reviews: ${finalRating.average} (${finalRating.count} reviews)`);
+        console.log(`📝 Saved ${product.reviews.length} reviews to product document`);
+        
+        // Log the reviews that were processed
+        validReviews.forEach((review, index) => {
+          console.log(`✅ Processed review ${index + 1}: ${review.rating} stars - "${review.comment.substring(0, 50)}..."`);
+        });
+      }
+    }
+    
+    // Process quick rating settings (only if no detailed reviews or as override)
+    if (quickRating && quickRating > 0) {
+      console.log(`Setting quick rating for product: ${product.name}`);
+      finalRating = {
+        average: Math.round(quickRating * 10) / 10,
+        count: quickReviewCount || finalRating.count || 1
+      };
+      console.log(`📊 Set quick rating: ${finalRating.average} (${finalRating.count} reviews)`);
+    }
+    
+    // Apply final rating to product
+    product.rating = finalRating;
+    await product.save();
+    
+    // Verify reviews and rating were saved by fetching from database
+    const savedProduct = await Product.findById(product._id);
+    console.log(`🔍 VERIFICATION: Product reviews in database:`, savedProduct.reviews?.length || 0);
+    console.log(`🔍 VERIFICATION: Product rating in database:`, savedProduct.rating);
+    console.log(`🔍 VERIFICATION: Product order count in database:`, savedProduct.popularitySettings?.orderCount);
 
     // Populate category for response
     await product.populate('category', 'name slug');
@@ -417,7 +593,41 @@ router.put('/:id', [
       return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
     }
 
-    const updateData = { ...req.body };
+    const { reviews, popularitySettings, ...updateData } = req.body;
+
+    // Handle popularity settings for updates
+    if (popularitySettings) {
+      updateData.popularitySettings = {
+        orderCount: popularitySettings.orderCount || 0,
+        offerCountdown: {
+          enabled: popularitySettings.offerCountdown?.enabled !== false,
+          duration: popularitySettings.offerCountdown?.duration || 15,
+          startTime: new Date() // Always reset timer when product is updated
+        },
+      };
+    }
+    
+    // Debug: Log what backend receives for update
+    console.log('📥 Backend received product update data:', {
+      productId: req.params.id,
+      reviewsCount: reviews ? reviews.length : 0,
+      reviews: reviews,
+      quickRating: req.body.quickRating,
+      quickReviewCount: req.body.quickReviewCount
+    });
+    
+    // Additional debug for reviews in update
+    if (reviews && reviews.length > 0) {
+      console.log('🔍 Detailed review data received for update:');
+      reviews.forEach((review, index) => {
+        console.log(`  Review ${index + 1}:`, {
+          customerName: review.customerName,
+          rating: review.rating,
+          comment: review.comment ? review.comment.substring(0, 50) + '...' : 'No comment',
+          date: review.date
+        });
+      });
+    }
 
     // If category is being updated, resolve it to ObjectId
     if (updateData.category) {
@@ -457,6 +667,90 @@ router.put('/:id', [
       return res.status(404).json({ message: 'Product not found' });
     }
 
+    // Auto-set isBestSeller if product is added to Value Combo or You May Like
+    const { isValueCombo, isYouMayLike, displaySections } = req.body;
+    if (isValueCombo || isYouMayLike || displaySections?.valueCombos || displaySections?.youMayAlsoLike) {
+      console.log('🎯 Product updated to Value Combo or You May Like - auto-setting as Best Seller');
+      product.isBestSeller = true;
+      if (!product.displaySections) product.displaySections = {};
+      product.displaySections.ourBestSellers = true;
+      await product.save();
+      console.log('✅ Product automatically added to Our Best Sellers');
+    }
+
+    // Process quick rating settings and detailed reviews
+    const { quickRating, quickReviewCount } = req.body;
+    
+    // Initialize rating object
+    let finalRating = product.rating || { average: 0, count: 0 };
+    
+    // Process detailed reviews if provided (priority over quick rating)
+    if (reviews && reviews.length > 0) {
+      console.log(`📝 Processing ${reviews.length} reviews for product update: ${product.name}`);
+      console.log(`📝 Raw reviews received for update:`, JSON.stringify(reviews, null, 2));
+      
+      // Filter valid reviews (more lenient - only require customer name and rating)
+      const validReviews = reviews.filter(review => 
+        review.customerName && review.customerName.trim() !== '' && 
+        review.rating && review.rating > 0
+      );
+      
+      console.log(`📝 Valid reviews after filtering (update): ${validReviews.length} out of ${reviews.length}`);
+      console.log(`📝 Valid reviews for update:`, JSON.stringify(validReviews, null, 2));
+      
+      if (validReviews.length > 0) {
+        const totalRating = validReviews.reduce((sum, review) => sum + parseInt(review.rating), 0);
+        const averageRating = totalRating / validReviews.length;
+        
+        // Save reviews to product document AND set rating
+        product.reviews = validReviews.map(review => ({
+          id: review.id || `review_${Date.now()}_${Math.random()}`,
+          customerName: review.customerName,
+          customerEmail: review.customerEmail || '',
+          rating: parseInt(review.rating),
+          title: review.title || '',
+          comment: review.comment || 'Great product!', // Default comment if empty
+          date: review.date || new Date().toISOString().split('T')[0],
+          verified: review.verified || true,
+          helpful: review.helpful || 0
+        }));
+        
+        // Update product rating from detailed reviews
+        finalRating = {
+          average: Math.round(averageRating * 10) / 10,
+          count: validReviews.length
+        };
+        
+        console.log(`📊 Updated product rating from admin reviews: ${finalRating.average} (${finalRating.count} reviews)`);
+        console.log(`📝 Saved ${product.reviews.length} reviews to product document`);
+        
+        // Log the reviews that were processed
+        validReviews.forEach((review, index) => {
+          console.log(`✅ Processed review ${index + 1}: ${review.rating} stars - "${review.comment.substring(0, 50)}..."`);
+        });
+      }
+    }
+    
+    // Process quick rating settings (only if no detailed reviews or as override)
+    if (quickRating && quickRating > 0) {
+      console.log(`Setting quick rating for product update: ${product.name}`);
+      finalRating = {
+        average: Math.round(quickRating * 10) / 10,
+        count: quickReviewCount || finalRating.count || 1
+      };
+      console.log(`📊 Updated quick rating: ${finalRating.average} (${finalRating.count} reviews)`);
+    }
+    
+    // Apply final rating to product
+    product.rating = finalRating;
+    await product.save();
+    
+    // Verify reviews and rating were saved by fetching from database
+    const savedProduct = await Product.findById(product._id);
+    console.log(`🔍 VERIFICATION (UPDATE): Product reviews in database:`, savedProduct.reviews?.length || 0);
+    console.log(`🔍 VERIFICATION (UPDATE): Product rating in database:`, savedProduct.rating);
+    console.log(`🔍 VERIFICATION (UPDATE): Product order count in database:`, savedProduct.popularitySettings?.orderCount);
+
     res.json({
       message: 'Product updated successfully',
       product
@@ -481,11 +775,12 @@ router.delete('/:id', adminAuth, async (req, res) => {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    // Instead of deleting, mark as inactive
-    product.status = 'Inactive';
-    await product.save();
+    // Permanently delete the product from database
+    await Product.findByIdAndDelete(req.params.id);
+    
+    console.log(`🗑️ Product permanently deleted: ${product.name} (ID: ${req.params.id})`);
 
-    res.json({ message: 'Product marked as inactive successfully' });
+    res.json({ message: 'Product deleted successfully' });
   } catch (error) {
     console.error('Product deletion error:', error);
     if (error.name === 'CastError') {
@@ -522,6 +817,45 @@ router.post('/:id/wishlist', auth, async (req, res) => {
   } catch (error) {
     console.error('Wishlist error:', error);
     res.status(500).json({ message: 'Server error updating wishlist' });
+  }
+});
+
+// Toggle product status (Active/Inactive)
+router.patch('/:id/toggle-status', adminAuth, async (req, res) => {
+  try {
+    const { status } = req.body;
+    
+    // Validate status
+    if (!status || !['Active', 'Inactive'].includes(status)) {
+      return res.status(400).json({ 
+        message: 'Invalid status. Must be "Active" or "Inactive"' 
+      });
+    }
+
+    const product = await Product.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    );
+
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    console.log(`✅ Product ${product.name} status updated to ${status}`);
+
+    res.json({
+      message: `Product ${status === 'Active' ? 'activated' : 'deactivated'} successfully`,
+      product: {
+        _id: product._id,
+        name: product.name,
+        status: product.status
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error updating product status:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
