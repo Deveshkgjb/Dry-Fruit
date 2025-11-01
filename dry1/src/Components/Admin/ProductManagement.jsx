@@ -799,13 +799,12 @@ const ProductManagement = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-3">
-                        Category <span className="text-red-500">*</span>
+                        Category
                       </label>
                       <select
                         value={formData.category}
                         onChange={(e) => handleInputChange('category', e.target.value)}
                         className="w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50/50"
-                        required
                       >
                         <option value="">Select Category</option>
                         {categories.map((category) => (
