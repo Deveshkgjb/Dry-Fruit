@@ -380,7 +380,6 @@ router.post('/', [
   adminAuth,
   body('name').trim().notEmpty().withMessage('Product name is required'),
   body('description').trim().notEmpty().withMessage('Product description is required'),
-  body('category').notEmpty().withMessage('Category is required'),
   body('sizes').isArray({ min: 1 }).withMessage('At least one size option is required'),
   body('sizes.*.size').notEmpty().withMessage('Size is required'),
   body('sizes.*.price').isNumeric({ min: 0 }).withMessage('Price must be a positive number'),
@@ -416,10 +415,13 @@ router.post('/', [
       });
     }
 
-    // Find the category by name
-    const categoryDoc = await Category.findOne({ name: category });
-    if (!categoryDoc) {
-      return res.status(400).json({ message: 'Category not found' });
+    // Find the category by name (if provided)
+    let categoryDoc = null;
+    if (category) {
+      categoryDoc = await Category.findOne({ name: category });
+      if (!categoryDoc) {
+        return res.status(400).json({ message: 'Category not found' });
+      }
     }
 
     // Generate slug from product name
@@ -462,17 +464,21 @@ router.post('/', [
     const productData = {
       name,
       description,
-      category: categoryDoc._id, // Use ObjectId
-      categorySlug: categoryDoc.slug, // Use category slug
       slug: finalSlug, // Generated slug
       sizes,
       popularitySettings: processedPopularitySettings,
       ...otherData
     };
 
+    // Add category info only if category is provided
+    if (categoryDoc) {
+      productData.category = categoryDoc._id; // Use ObjectId
+      productData.categorySlug = categoryDoc.slug; // Use category slug
+    }
+
     console.log('Creating product with category info:', {
-      categoryName: categoryDoc.name,
-      categorySlug: categoryDoc.slug,
+      categoryName: categoryDoc ? categoryDoc.name : 'No category',
+      categorySlug: categoryDoc ? categoryDoc.slug : 'No category',
       productName: name,
       productSlug: finalSlug,
       reviewsCount: reviews ? reviews.length : 0
