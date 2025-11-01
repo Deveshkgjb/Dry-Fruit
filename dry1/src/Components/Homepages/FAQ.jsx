@@ -5,28 +5,28 @@ const FAQ = () => {
 
   const faqData = [
     {
-      question: "Where can I buy Premium Dry Fruits and Nuts online?",
-      answer: "You can buy premium dry fruits and nuts directly from our website. We offer a wide selection of high-quality nuts, dried fruits, and healthy snacks with convenient home delivery options."
+      question: "Where can I buy trendy clothing online from TriThread?",
+      answer: "You can shop the latest fashion trends directly from our TriThread website. We offer a wide selection of high-quality clothing for men, women, and kids with convenient home delivery options and easy returns."
     },
     {
-      question: "What are the benefits of Dry Fruits?",
-      answer: "Dry fruits are packed with essential nutrients, vitamins, and minerals. They provide energy, support heart health, boost immunity, aid in weight management, and are rich in antioxidants that help fight free radicals."
+      question: "What types of clothing does TriThread offer?",
+      answer: "TriThread offers a diverse range of clothing including casual wear, formal attire, activewear, ethnic wear, accessories, and seasonal collections. We cater to all age groups with stylish and comfortable fashion choices for every occasion."
     },
     {
-      question: "What is the average shelf life of Dry Fruits?",
-      answer: "The shelf life varies by type of dry fruit. Generally, most dry fruits last 6-12 months when stored properly in a cool, dry place. Nuts like almonds and walnuts can last up to a year, while dried fruits like dates and figs last 6-8 months."
+      question: "What is your return and exchange policy?",
+      answer: "We offer a hassle-free 7-day return and exchange policy. If you're not satisfied with your purchase, you can return or exchange items within 7 days of delivery. Items must be unused, unwashed, and with original tags attached."
     },
     {
-      question: "What are the Health benefits of Dry Fruits?",
-      answer: "Dry fruits offer numerous health benefits including improved heart health, better digestion, stronger bones, enhanced brain function, better skin health, and weight management. They're also rich in fiber, healthy fats, and essential minerals."
+      question: "How do I choose the right size?",
+      answer: "Each product page includes a detailed size chart to help you find the perfect fit. We recommend measuring yourself and comparing with our size guide. If you're between sizes, we suggest sizing up for a comfortable fit. Our customer support team is always ready to help with sizing queries."
     },
     {
-      question: "What are some Healthy Seeds for Weight loss?",
-      answer: "Seeds like chia seeds, flax seeds, pumpkin seeds, and sunflower seeds are excellent for weight loss. They're high in fiber and protein, which help you feel full longer, boost metabolism, and provide essential nutrients while supporting your weight loss goals."
+      question: "What payment methods do you accept?",
+      answer: "TriThread accepts multiple payment methods including credit/debit cards, UPI (PhonePe, Google Pay, Paytm), net banking, and cash on delivery (COD). All online transactions are secure and encrypted for your safety."
     },
     {
-      question: "What all products can I buy from Mufindryfruit?",
-      answer: "Mufindryfruit offers a wide range of premium dry fruits, nuts, seeds, trail mixes, nut butters, dried fruits, healthy snacks, gift boxes, and specialty combinations. All products are carefully sourced and processed to maintain the highest quality standards."
+      question: "What all products can I buy from TriThread?",
+      answer: "TriThread offers a comprehensive range of fashion products including t-shirts, shirts, jeans, dresses, tops, ethnic wear, activewear, jackets, accessories, footwear, and seasonal collections. All products are carefully curated to bring you the latest trends in fashion at affordable prices."
     }
   ];
 
@@ -39,7 +39,7 @@ const FAQ = () => {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 md:px-8">
         {/* Section Title */}
         <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-8 md:mb-12 text-gray-800">
-          Frequently Ask Questions
+          Frequently Asked Questions
         </h2>
 
         {/* FAQ Items */}
