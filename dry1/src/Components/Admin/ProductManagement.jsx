@@ -1320,11 +1320,11 @@ const ProductManagement = () => {
                             onChange={(e) => handleInputChange('badges', { color: e.target.value }, index)}
                             className="w-full p-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
                           >
-                            <option value="red">Red</option>
-                            <option value="green">Green</option>
-                            <option value="blue">Blue</option>
-                            <option value="yellow">Yellow</option>
-                            <option value="purple">Purple</option>
+                            <option key="red" value="red">Red</option>
+                            <option key="green" value="green">Green</option>
+                            <option key="blue" value="blue">Blue</option>
+                            <option key="yellow" value="yellow">Yellow</option>
+                            <option key="purple" value="purple">Purple</option>
                           </select>
                         </div>
                         <button

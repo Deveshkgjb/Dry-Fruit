@@ -590,8 +590,7 @@ router.post('/', [
 router.put('/:id', [
   adminAuth,
   body('name').optional().trim().notEmpty().withMessage('Product name cannot be empty'),
-  body('description').optional().trim().notEmpty().withMessage('Product description cannot be empty'),
-  body('category').optional().notEmpty().withMessage('Category cannot be empty')
+  body('description').optional().trim().notEmpty().withMessage('Product description cannot be empty')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
