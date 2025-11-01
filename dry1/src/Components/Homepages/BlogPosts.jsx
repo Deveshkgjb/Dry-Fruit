@@ -2,27 +2,27 @@ const BlogPosts = () => {
   const blogPosts = [
     {
       id: 1,
-      title: "Important Health Benefits of Brazil Nuts Explained",
-      description: "Brazil nuts are seeds obtained from the brazil nut tree. They are known to have a smooth and buttery texture, with each seed encased in a fruit surrounded by a hard shell. Brazil nuts originate in ...",
+      title: "Top 10 Fashion Trends for This Season",
+      description: "Discover the latest fashion trends taking the industry by storm. From minimalist designs to bold statement pieces, we explore what's hot this season and how you can incorporate these trends into your wardrobe effortlessly...",
       date: "May 30, 2025",
       // Placeholder for blog image
-      category: "brazil nuts benefits",
+      category: "fashion trends 2025",
       bgColor: "bg-orange-100"
     },
     {
       id: 2,
-      title: "6 Benefits of Black Raisins For Females",
-      description: "Black raisins are tangy, sweet, dehydrated grapes that have a darker shade compared to other raisins. When it comes to women's health, black raisins are beneficial in many aspects. They are a good ...",
+      title: "How to Choose Perfect Fit Clothing",
+      description: "Finding the perfect fit is crucial for looking and feeling your best. Learn expert tips on understanding size charts, body measurements, and different fabric behaviors to ensure every purchase fits like a dream...",
       date: "May 30, 2025",
-      category: "black raisins benefits for females",
+      category: "styling tips",
       bgColor: "bg-pink-100"
     },
     {
       id: 3,
-      title: "Health Benefits of Eating Sunflower Seeds",
-      description: "In addition to being a delicious snack, sunflower seeds provide several health advantages. When it comes to using sunflower seeds, we may use them in salads or to produce butter. These little see...",
+      title: "Sustainable Fashion: Why It Matters",
+      description: "In today's world, sustainable fashion is more important than ever. Discover how eco-friendly materials, ethical manufacturing, and conscious consumption can make a positive impact on our planet while keeping you stylish...",
       date: "May 29, 2025",
-      category: "benefits of sunflower seeds",
+      category: "sustainable fashion",
       bgColor: "bg-yellow-100"
     }
   ];

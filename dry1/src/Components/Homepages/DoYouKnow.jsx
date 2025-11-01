@@ -9,39 +9,39 @@ const DoYouKnow = () => {
   const defaultFacts = [
     {
       id: 1,
-      icon: "🌿",
-      title: "100% Natural",
-      description: "All our dry fruits are naturally processed without any artificial preservatives, colors, or additives."
+      icon: "👕",
+      title: "Premium Fabrics",
+      description: "All our clothing is crafted from high-quality, breathable fabrics that ensure comfort and durability throughout the day."
     },
     {
       id: 2,
-      icon: "💪",
-      title: "Rich in Nutrients",
-      description: "Packed with essential vitamins, minerals, fiber, and antioxidants that boost your immunity and energy."
+      icon: "✨",
+      title: "Latest Trends",
+      description: "Stay ahead in fashion with our curated collections featuring the latest global trends and timeless classics."
     },
     {
       id: 3,
       icon: "🚚",
-      title: "Farm Fresh Delivery",
-      description: "Direct sourcing from farms ensures maximum freshness and quality delivered right to your doorstep."
+      title: "Fast Delivery",
+      description: "Quick and reliable nationwide shipping ensures your favorite outfits reach you within 3-5 business days."
     },
     {
       id: 4,
       icon: "🏆",
-      title: "Premium Quality",
-      description: "Each product undergoes strict quality checks to ensure you get only the finest dry fruits and nuts."
+      title: "Quality Assured",
+      description: "Each garment undergoes strict quality checks to ensure perfect stitching, color fastness, and superior finish."
     },
     {
       id: 5,
       icon: "🌍",
-      title: "Global Sourcing",
-      description: "We source the best varieties from around the world - California almonds, Turkish figs, Iranian pistachios."
+      title: "Sustainable Fashion",
+      description: "We're committed to eco-friendly practices, using sustainable materials and ethical manufacturing processes."
     },
     {
       id: 6,
       icon: "❤️",
-      title: "Heart Healthy",
-      description: "Rich in good fats, protein, and fiber that support heart health and help maintain cholesterol levels."
+      title: "Perfect Fit",
+      description: "Detailed size guides and flexible exchange policy ensure you find the perfect fit for your unique style."
     }
   ];
 
@@ -88,8 +88,8 @@ const DoYouKnow = () => {
 
   // Use dynamic content if available, otherwise fallback to default
   const doYouKnowData = pageContent?.homepage?.doYouKnow || {
-    title: "Do You Know?",
-    subtitle: "Discover amazing facts about our premium dry fruits and nuts that make them the perfect choice for your healthy lifestyle.",
+    title: "Did You Know?",
+    subtitle: "Discover amazing facts about TriThread's premium fashion collection that make us the perfect choice for your style journey.",
     facts: defaultFacts
   };
 
@@ -118,7 +118,7 @@ const DoYouKnow = () => {
             {doYouKnowData.title || "Do You Know?"}
           </h2>
           <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">
-            {doYouKnowData.subtitle || "Discover amazing facts about our premium dry fruits and nuts that make them the perfect choice for your healthy lifestyle."}
+            {doYouKnowData.subtitle || "Discover amazing facts about TriThread's premium fashion collection that make us the perfect choice for your style journey."}
           </p>
         </div>
 
@@ -164,11 +164,11 @@ const DoYouKnow = () => {
         <div className="mt-12 md:mt-16 text-center">
           <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12 border border-gray-100">
             <h3 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4">
-              Ready to Experience Premium Quality?
+              Ready to Experience Premium Fashion?
             </h3>
             <p className="text-lg text-gray-600 mb-6 max-w-2xl mx-auto">
-              Join thousands of satisfied customers who have made Mufindryfruit their trusted choice 
-              for healthy, delicious, and premium dry fruits and nuts.
+              Join thousands of fashion enthusiasts who have made TriThread their trusted choice 
+              for stylish, comfortable, and premium clothing collections.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors duration-300">
