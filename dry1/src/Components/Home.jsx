@@ -7,7 +7,7 @@ import OurBestSellers from './Homepages/OurBestSellers.jsx';
 import OfferBar2 from './Homepages/OfferBar2.jsx';
 import ValueCombos from './Homepages/ValueCombos.jsx';
 import PartyMixesVideo from './Homepages/PartyMixesVideo.jsx';
-import HappilosJourney from './Homepages/HappilosJourney.jsx';
+import TriThreadJourney from './Homepages/HappilosJourney.jsx';
 import Offer3 from './Homepages/Offer3.jsx';
 import BlogPosts from './Homepages/BlogPosts.jsx';
 import FAQ from './Homepages/FAQ.jsx';
@@ -43,7 +43,7 @@ const Home = () => {
       <PartyMixesVideo />
       
       {/* Company Journey Section */}
-      <HappilosJourney />
+      <TriThreadJourney />
       
       {/* Third Offer Banner */}
       <Offer3 />
