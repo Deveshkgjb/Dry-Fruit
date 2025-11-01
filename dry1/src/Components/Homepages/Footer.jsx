@@ -63,7 +63,7 @@ const Footer = () => {
             <ul className="space-y-2 sm:space-y-3">
               <li>
                 <a href="/about" className="text-white hover:text-gray-200 transition-colors duration-200 !text-white text-sm sm:text-base" style={{color: 'white'}}>
-                  About Mufin Dry Fruit
+                  About TriThread
                 </a>
               </li>
               <li>

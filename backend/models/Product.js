@@ -89,7 +89,7 @@ const productSchema = new mongoose.Schema({
   badges: [badgeSchema],
   brand: {
     type: String,
-    default: 'Happilo'
+    default: 'TriThread'
   },
   countryOfOrigin: String,
   shelfLife: String,

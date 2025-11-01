@@ -40,7 +40,7 @@ export default function Navbar() {
   }, [categories]);
   const [logo, setLogo] = useState({
     image: '/Logo.png',
-    alt: 'Mufin DRY FRUIT Logo'
+    alt: 'TriThread Logo'
   });
   const [logoKey, setLogoKey] = useState(0); // For forcing logo refresh
 
@@ -98,7 +98,7 @@ export default function Navbar() {
             <img 
               key={`logo-${logoKey}`} // Force re-render when logo changes
               src="/Logo.png" 
-              alt="Mufin DRY FRUIT Logo" 
+              alt="TriThread Logo" 
               className='h-8 sm:h-10 md:h-12 w-auto object-contain'
               onError={(e) => {
                 console.error('Logo failed to load:', e.target.src);
@@ -119,18 +119,18 @@ export default function Navbar() {
 
         {/* Mobile Navigation Menu - Visible on mobile */}
         <div className="flex lg:hidden items-center space-x-0.5 sm:space-x-1 text-[10px] sm:text-xs flex-1 justify-center mx-1 h-full">
-          <Link to="/all-products" className="flex text-xl font-bold items-center text-black hover:text-blue-900 font-black px-1 sm:px-2 py-1 whitespace-nowrap h-full rounded-md transition-all duration-200 hover:bg-blue-100 underline decoration-2 underline-offset-2" style={{color: '#000000', fontWeight: '1200', textShadow: '2px 2px 4px rgba(0,0,0,0.4)', letterSpacing: '0.5px', textDecoration: 'underline', textDecorationColor: '#000000', textDecorationThickness: '2px'}}>Products</Link>
-          <Link to="/combos" className="flex text-xl font-bold items-center text-black hover:text-green-900 font-black px-1 sm:px-2 py-1 whitespace-nowrap h-full rounded-md transition-all duration-200 hover:bg-green-100 underline decoration-2 underline-offset-2" style={{color: '#000000', fontWeight: '1200', textShadow: '2px 2px 4px rgba(0,0,0,0.4)', letterSpacing: '0.5px', textDecoration: 'underline', textDecorationColor: '#000000', textDecorationThickness: '2px'}}>Combos</Link>
-          <Link to="/contact-us" className="flex text-xl font-bold items-center text-black hover:text-purple-900 font-black px-1 sm:px-2 py-1 whitespace-nowrap h-full rounded-md transition-all duration-200 hover:bg-purple-100 underline decoration-2 underline-offset-2" style={{color: '#000000', fontWeight: '1200', textShadow: '2px 2px 4px rgba(0,0,0,0.4)', letterSpacing: '0.5px', textDecoration: 'underline', textDecorationColor: '#000000', textDecorationThickness: '2px'}}>Contact</Link>
+          <Link to="/all-products" className="flex text-xl font-bold items-center text-black hover:text-blue-900 font-black px-1 sm:px-2 py-1 whitespace-nowrap h-full rounded-md transition-all duration-200 hover:bg-blue-100" style={{color: '#000000', fontWeight: '1200', textShadow: '2px 2px 4px rgba(0,0,0,0.4)', letterSpacing: '0.5px'}}>Products</Link>
+          <Link to="/combos" className="flex text-xl font-bold items-center text-black hover:text-green-900 font-black px-1 sm:px-2 py-1 whitespace-nowrap h-full rounded-md transition-all duration-200 hover:bg-green-100" style={{color: '#000000', fontWeight: '1200', textShadow: '2px 2px 4px rgba(0,0,0,0.4)', letterSpacing: '0.5px'}}>Combos</Link>
+          <Link to="/contact-us" className="flex text-xl font-bold items-center text-black hover:text-purple-900 font-black px-1 sm:px-2 py-1 whitespace-nowrap h-full rounded-md transition-all duration-200 hover:bg-purple-100" style={{color: '#000000', fontWeight: '1200', textShadow: '2px 2px 4px rgba(0,0,0,0.4)', letterSpacing: '0.5px'}}>Contact</Link>
         </div>
 
         {/* Desktop Navigation Menu */}
         <div className="hidden lg:flex items-center space-x-4 xl:space-x-8">
-          <Link to="/all-products" className="flex items-center text-black hover:text-blue-900 font-black text-3xl px-3 py-2 rounded-md transition-all duration-200 hover:bg-blue-100 underline decoration-2 underline-offset-2" style={{color: '#000000', fontWeight: '1200', textShadow: '2px 2px 4px rgba(0,0,0,0.4)', letterSpacing: '0.5px', textDecoration: 'underline', textDecorationColor: '#000000', textDecorationThickness: '2px'}}>
+          <Link to="/all-products" className="flex items-center text-black hover:text-blue-900 font-black text-3xl px-3 py-2 rounded-md transition-all duration-200 hover:bg-blue-100" style={{color: '#000000', fontWeight: '1200', textShadow: '2px 2px 4px rgba(0,0,0,0.4)', letterSpacing: '0.5px'}}>
             All Products
           </Link>
-          <Link to="/combos" className="text-black hover:text-green-900 font-black text-3xl px-3 py-2 rounded-md transition-all duration-200 hover:bg-green-100 underline decoration-2 underline-offset-2" style={{color: '#000000', fontWeight: '1200', textShadow: '2px 2px 4px rgba(0,0,0,0.4)', letterSpacing: '0.5px', textDecoration: 'underline', textDecorationColor: '#000000', textDecorationThickness: '2px'}}>Combos</Link>
-          <Link to="/contact-us" className="text-black hover:text-purple-900 font-black text-3xl px-3 py-2 rounded-md transition-all duration-200 hover:bg-purple-100 underline decoration-2 underline-offset-2" style={{color: '#000000', fontWeight: '1200', textShadow: '2px 2px 4px rgba(0,0,0,0.4)', letterSpacing: '0.5px', textDecoration: 'underline', textDecorationColor: '#000000', textDecorationThickness: '2px'}}>Contact Us</Link>
+          <Link to="/combos" className="text-black hover:text-green-900 font-black text-3xl px-3 py-2 rounded-md transition-all duration-200 hover:bg-green-100" style={{color: '#000000', fontWeight: '1200', textShadow: '2px 2px 4px rgba(0,0,0,0.4)', letterSpacing: '0.5px'}}>Combos</Link>
+          <Link to="/contact-us" className="text-black hover:text-purple-900 font-black text-3xl px-3 py-2 rounded-md transition-all duration-200 hover:bg-purple-100" style={{color: '#000000', fontWeight: '1200', textShadow: '2px 2px 4px rgba(0,0,0,0.4)', letterSpacing: '0.5px'}}>Contact Us</Link>
         </div>
 
         {/* Search Bar and Icons */}
@@ -139,7 +139,7 @@ export default function Navbar() {
           <div className="hidden md:flex items-center bg-gray-100 rounded-lg overflow-hidden">
             <input
               type="text"
-              placeholder="Search premium dry fruits..."
+              placeholder="Search trendy clothing..."
               className="bg-transparent px-2 sm:px-4 py-2 outline-none text-sm w-32 sm:w-48 lg:w-64 focus:bg-white focus:shadow-sm transition-all duration-300"
             />
             <button className="px-3 text-gray-600 hover:text-green-600 transition-colors duration-300">

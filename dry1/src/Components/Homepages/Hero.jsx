@@ -23,8 +23,8 @@ const Hero = () => {
 
   // Slider images array
   const sliderImages = [
-    "/muf1.png",
-    "/slide2.png",
+    "/muff.png",
+    "/muff2.png",
     "/slide1.png"
   ];
 
