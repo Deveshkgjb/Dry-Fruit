@@ -125,8 +125,8 @@ const ContactUs = () => {
                   </div>
                   <div className="ml-4">
                     <h3 className="text-lg font-medium text-gray-900">Email</h3>
-                    <p className="text-gray-600">admin@mufindryfruit.com</p>
-                    <p className="text-gray-600">support@mufindryfruit.com</p>
+                    <p className="text-gray-600">admin@trithread.com</p>
+                    <p className="text-gray-600">support@trithread.com</p>
                   </div>
                 </div>
 
@@ -156,21 +156,21 @@ const ContactUs = () => {
                   </div>
                   <div className="ml-4">
                     <h3 className="text-lg font-medium text-gray-900">Address</h3>
-                    <p className="text-gray-600">123 Dry Fruits Street</p>
-                    <p className="text-gray-600">Healthy City, HC 12345</p>
+                    <p className="text-gray-600">Fashion Plaza, Yeshwantpur</p>
+                    <p className="text-gray-600">Bengaluru, Karnataka 560022</p>
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="bg-green-50 p-6 rounded-lg">
-              <h3 className="text-lg font-medium text-green-900 mb-2">Why Choose Mufindryfruit?</h3>
+              <h3 className="text-lg font-medium text-green-900 mb-2">Why Choose TriThread?</h3>
               <ul className="space-y-2 text-green-800">
                 <li className="flex items-center">
                   <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
-                  Premium quality dry fruits and nuts
+                  Premium quality fabrics and designs
                 </li>
                 <li className="flex items-center">
                   <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
